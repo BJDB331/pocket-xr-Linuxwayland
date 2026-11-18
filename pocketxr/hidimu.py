@@ -106,6 +106,9 @@ class AirTimestamp:
 # ---------------- VITURE ----------------
 VITURE = 0x35CA
 VITURE_BEAST = 0x1211
+# A second Beast USB id, reported by a tester (November 2026) with the same layout: HID on interface 5.
+VITURE_BEAST_1201 = 0x1201
+BEAST_PRODUCTS = frozenset({VITURE_BEAST, VITURE_BEAST_1201})
 VITURE_MICROPHONE = 0x1102
 V_PREAMBLE = 0x0010
 V_HEADER = 8
@@ -266,6 +269,12 @@ class AirReader(_HidReader):
             time.sleep(1.0)
 
 
+def beast_first(nodes):
+    """(interface, path, product) nodes in the order tried: the Beast's motion sensor is HID interface 5, so a Beast's
+    interface 5 comes first; on other models every interface is tried, lowest first."""
+    return sorted(nodes, key=lambda n: (not (n[2] in BEAST_PRODUCTS and n[0] == 5), n[0]))
+
+
 class VitureReader(_HidReader):
     """axes: "beast" for the Beast (the sensor sends x right, y down, z front: as the One), else as the sensor sends."""
 
@@ -275,9 +284,7 @@ class VitureReader(_HidReader):
 
     def _candidates(self):
         nodes = [n for n in hidraw_nodes(VITURE) if n[2] != VITURE_MICROPHONE]
-        # The Beast's motion sensor is HID interface 5; on other models every interface is tried.
-        nodes.sort(key=lambda n: (not (n[2] == VITURE_BEAST and n[0] == 5), n[0]))
-        return nodes
+        return beast_first(nodes)
 
     def run(self):
         while not self.stop:

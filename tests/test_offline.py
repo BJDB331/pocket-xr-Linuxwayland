@@ -200,6 +200,16 @@ def test_glasses_families():
     assert g.why_no_tracking() is None
     pro2 = glasses.detect([(0x35CA, 0x1301, [0x03], "VITURE Pro 2")])
     assert not pro2.beast and not pro2.viture_tracking_default() and "off" in pro2.why_no_tracking()
+    # The Beast also comes as 0x1201 (a tester's, November 2026), with the same layout.
+    b1201 = glasses.detect([(0x35CA, 0x1102, [0x01, 0x03], "VITURE Microphone"), (0x35CA, 0x1301, [0x03], "VITURE Pro 2"),
+                            (0x35CA, 0x1201, [0x03] * 6, "VITURE Beast XR Glasses")])
+    assert b1201.product == 0x1201 and b1201.beast and b1201.axes == "one" and b1201.viture_tracking_default()
+    assert b1201.why_no_tracking() is None
+    assert glasses.is_beast(0x1211) and glasses.is_beast(0x1201) and not glasses.is_beast(0x1301)
+    nodes = [(0, "/dev/hidraw0", 0x1201), (5, "/dev/hidraw5", 0x1201), (3, "/dev/hidraw3", 0x1201)]
+    assert [n[0] for n in hidimu.beast_first(nodes)] == [5, 0, 3]
+    assert [n[0] for n in hidimu.beast_first([(n[0], n[1], 0x1211) for n in nodes])] == [5, 0, 3]
+    assert [n[0] for n in hidimu.beast_first([(n[0], n[1], 0x1301) for n in nodes])] == [0, 3, 5]
     air2 = glasses.detect([(0x3318, 0x0428, [0x03] * 4, "XREAL Air 2")])
     assert air2.family == "air" and air2.imu == "air" and air2.axes == "aura" and not air2.control_link
     helen = glasses.detect([(0x3318, 0x043F, [0x03] * 4, "")])
