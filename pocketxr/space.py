@@ -68,10 +68,42 @@ ARRANGE_ROW_GAP_M = 0.2
 # AllWindows
 MAX_SPAN_DEG = 330.0
 PRESETS_MAX = 8
+# Steady mode: the screens side by side on the glasses' flat canvas, this many canvas pixels apart (the "Screen gap"
+# setting, steady_gap_px in settings.json)
+STEADY_GAP_DEFAULT_PX = 40
+STEADY_GAP_MIN_PX, STEADY_GAP_MAX_PX, STEADY_GAP_STEP_PX = 0, 120, 10
 
 
 def clamp(v, lo, hi):
     return lo if v < lo else hi if v > hi else v
+
+
+def steady_gap_px(v):
+    """The Screen gap from settings.json, kept in 0 to 120 canvas pixels; anything that is not a number is the default."""
+    try:
+        v = float(v)
+    except (TypeError, ValueError):
+        return STEADY_GAP_DEFAULT_PX
+    if v != v:  # NaN
+        return STEADY_GAP_DEFAULT_PX
+    return int(round(clamp(v, STEADY_GAP_MIN_PX, STEADY_GAP_MAX_PX)))
+
+
+def flat_layout(sizes, w, h, canvas_scale, gap_px):
+    """Steady mode's flat canvas: screens of sizes [(fw, fh), ...] side by side, gap_px canvas pixels apart, centred
+    across a w x h window. Returns k (window pixels per canvas pixel) and each screen's (left, width, height) in -1..1
+    units, as _draw_flat draws them."""
+    gap_px = steady_gap_px(gap_px)
+    total_w = sum(fw for fw, _ in sizes) + gap_px * (len(sizes) - 1)
+    max_h = max(fh for _, fh in sizes)
+    k = min(canvas_scale * h / max_h, 0.96 * w / total_w)
+    x = -total_w * k / w  # left edge
+    out = []
+    for fw, fh in sizes:
+        pw = 2 * fw * k / w
+        out.append((x, pw, 2 * fh * k / h))
+        x += pw + 2 * gap_px * k / w
+    return k, out
 
 
 def deg_to_m(deg, d):

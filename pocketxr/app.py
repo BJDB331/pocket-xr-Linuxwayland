@@ -30,6 +30,7 @@ from . import settingsctl
 from .i18n import tr
 from .recorder import Recorder
 from .settingsctl import SettingsControl
+from .space import STEADY_GAP_DEFAULT_PX, STEADY_GAP_STEP_PX, flat_layout, steady_gap_px
 from .spaceview import SpaceView
 from .xcapture import XCapture
 
@@ -42,7 +43,7 @@ GL_TEXTURE_MAX_ANISOTROPY = 0x84FE  # EXT_texture_filter_anisotropic, core in GL
 
 DEFAULTS = {"view": "3dof", "source": "deck", "distance": 2.0, "scale": 1.0, "canvas_scale": 0.8, "look": True,
             "snap": False, "locked": False, "cursor_speed": 5, "curve_default": 0.0, "cursor_follows_head": True, "sbs_3d": True,
-            "viture_tracking": None}
+            "viture_tracking": None, "steady_gap_px": STEADY_GAP_DEFAULT_PX}
 
 # 3DoF: a window 1600 px wide is this wide at 1.0, in metres (the Deck's screen 1.28 m, an app's 1920 px screen 1.92 m:
 # about 50 degrees at 2 m, a little narrower than the glasses' own view).
@@ -75,6 +76,7 @@ def load_settings():
             s.update({k: v for k, v in json.load(f).items() if k in DEFAULTS})
     except (OSError, ValueError):
         pass
+    s["steady_gap_px"] = steady_gap_px(s["steady_gap_px"])  # a hand-edited settings.json: kept in 0 to 120
     return s
 
 
@@ -522,6 +524,8 @@ class App:
                 self.resize(int(value))
             else:
                 self.space.scale_all_or_focused(int(value))
+        elif cmd == "steady_gap":
+            self.set_gap(int(value))
         elif cmd == "distance":
             key = self.space.focus if self.space.focus in self.space.poses else next(iter(self.space.poses), None)
             if key is not None and not self.settings.get("locked", False):
@@ -644,6 +648,11 @@ class App:
             self.settings["scale"] = min(2.5, max(0.4, self.settings["scale"] * (1.1 if step > 0 else 1 / 1.1)))
         save_settings(self.settings)
 
+    def set_gap(self, step):
+        """Screen gap: the space between screens in Steady mode, 10 canvas pixels a step, 0 to 120."""
+        self.settings["steady_gap_px"] = steady_gap_px(self.settings["steady_gap_px"] + STEADY_GAP_STEP_PX * step)
+        save_settings(self.settings)
+
     def next_app(self):
         panels = sorted(self.capture.snapshot(), key=lambda p: p.first_seen)
         apps = [p for p in panels if p.key != "deck"]
@@ -738,6 +747,7 @@ class App:
             "recording": self.recorder.wanted,
             "steady_ok": bool(g and g.steady_6dof),
             "flat": self._flat(),
+            "steady_gap_px": self.settings["steady_gap_px"],
             "viture": bool(g and g.family == "viture"),
             "viture_on": bool(g and g.family == "viture" and self._viture_on()),
             "viture_label": tr("VITURE head tracking") if g and g.beast else tr("Experimental VITURE head tracking"),
@@ -845,16 +855,10 @@ class App:
         shown = [p for p in panels if p.frame is not None]
         if not shown:
             return
-        gap_px = 40
-        total_w = sum(p.frame.w for p in shown) + gap_px * (len(shown) - 1)
-        max_h = max(p.frame.h for p in shown)
-        k = min(self.settings["canvas_scale"] * h / max_h, 0.96 * w / total_w)  # canvas pixels per window pixel
-        x = -total_w * k / w  # left edge, -1..1 units
-        for p in shown:
-            pw = 2 * p.frame.w * k / w
-            ph = 2 * p.frame.h * k / h
+        k, rects = flat_layout([(p.frame.w, p.frame.h) for p in shown], w, h, self.settings["canvas_scale"],
+                               self.settings["steady_gap_px"])  # k: canvas pixels per window pixel
+        for p, (x, pw, ph) in zip(shown, rects):
             self._quad(p, x, ph / 2, pw, ph, 0.0, 2 * k / w, 2 * k / h)
-            x += pw + 2 * gap_px * k / w
 
     def _draw_space(self, panels, w, h, now):
         sbs = w >= 3 * h

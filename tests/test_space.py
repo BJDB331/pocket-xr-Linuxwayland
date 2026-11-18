@@ -104,6 +104,29 @@ def test_pixels():
     assert w <= 2560 and h <= 1440
 
 
+
+def test_steady_screen_gap():
+    # settings.json's steady_gap_px: kept in 0 to 120, anything that is not a number is the default 40
+    assert S.steady_gap_px(40) == 40 and S.steady_gap_px(-30) == 0 and S.steady_gap_px(500) == 120
+    assert S.steady_gap_px("wide") == 40 and S.steady_gap_px(None) == 40 and S.steady_gap_px(float("nan")) == 40
+    assert S.steady_gap_px(55.4) == 55
+    sizes = [(1280, 800), (1920, 1080)]
+    w, h = 3840, 1080
+    for gap in (0, 40, 120):
+        k, rects = S.flat_layout(sizes, w, h, 0.8, gap)
+        (x0, pw0, _), (x1, pw1, ph1) = rects
+        assert abs((x1 - (x0 + pw0)) - 2 * gap * k / w) < 1e-9, gap  # the space between, in canvas pixels
+        assert abs(x0 + (x1 + pw1)) < 1e-9, gap  # centred
+        assert abs(ph1 - 2 * 1080 * k / h) < 1e-9
+    # the default draws as the old fixed 40 did
+    k, rects = S.flat_layout(sizes, w, h, 0.8, 40)
+    total_w = 1280 + 1920 + 40
+    k_old = min(0.8 * h / 1080, 0.96 * w / total_w)
+    assert abs(k - k_old) < 1e-12 and abs(rects[0][0] + total_w * k_old / w) < 1e-12
+    # a wide gap makes the screens smaller rather than letting them run off the canvas
+    k, rects = S.flat_layout([(1920, 1080)] * 3, 3840, 1080, 1.0, 120)
+    assert rects[-1][0] + rects[-1][1] <= 1.0 + 1e-9 and rects[0][0] >= -1.0 - 1e-9
+
 if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_"):

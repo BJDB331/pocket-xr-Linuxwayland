@@ -127,6 +127,36 @@ class Switch(tk.Canvas):
         self.create_oval(k - th / 2 + 3, y0 + 3, k + th / 2 - 3, y0 + th - 3, fill="#F5F5F6", outline="")
 
 
+class Stepper(tk.Canvas):
+    """A row with a title, a line under it, and its value between a minus and a plus button, as Switch's row."""
+
+    def __init__(self, parent, title, sub, command, bg=C["card"]):
+        super().__init__(parent, height=44, bg=bg, highlightthickness=0, bd=0)
+        self.title, self.sub = title, sub
+        self.value = ""
+        self.minus = Button(self, "\u2212", lambda: command(-1), height=30, width=36, font=(MEDIUM, 12), radius=10)
+        self.plus = Button(self, "+", lambda: command(1), height=30, width=36, font=(MEDIUM, 12), radius=10)
+        self.bind("<Configure>", lambda e: self.draw())
+
+    def set(self, value):
+        if value != self.value:
+            self.value = value
+            self.draw()
+
+    def draw(self):
+        self.delete("all")
+        w, h = self.winfo_width(), self.winfo_height()
+        bw, vw = 36, 50
+        x_plus = w - 14 - bw
+        x_minus = x_plus - vw - bw
+        room = x_minus - 14 - 10
+        self.create_text(14, 14, text=self.title, anchor="w", fill=C["ink"], font=fitted((FONT, 11), self.title, room))
+        self.create_text(14, 31, text=self.sub, anchor="w", fill=C["ink2"], font=fitted((FONT, 8), self.sub, room, 6))
+        self.create_text(x_minus + bw + vw / 2, h / 2, text=self.value, fill=C["ink"], font=(FONT, 11))
+        self.create_window(x_minus, h / 2, window=self.minus, anchor="w")
+        self.create_window(x_plus, h / 2, window=self.plus, anchor="w")
+
+
 class Card(tk.Canvas):
     """A section: a small caps title above a rounded card that holds a frame."""
 
@@ -249,6 +279,9 @@ class Panel:
             b.grid(row=0, column=c_, sticky="ew", padx=2)
             wr.columnconfigure(c_, weight=1)
             self.adjust[label] = b
+        # Steady mode only: the space between the screens on the glasses' flat canvas
+        self.gap = Stepper(win.body, tr("Screen gap"), tr("The space between screens in Steady mode."),
+                           lambda step: send("steady_gap", step))
 
         self.message = tk.Label(root, text="", bg=C["page"], fg=C["accent"], font=(FONT, 10), justify="left",
                                 anchor="w", wraplength=W - 36)
@@ -341,6 +374,12 @@ class Panel:
         flat = st.get("flat", False)
         for k in ("Nearer", "Further"):
             self.adjust[k].set(enabled=not flat)
+        if flat:
+            if not self.gap.winfo_ismapped():
+                self.gap.pack(fill="x", padx=2)
+            self.gap.set(f"{st.get('steady_gap_px', 40)} px")
+        elif self.gap.winfo_ismapped():
+            self.gap.pack_forget()
         if st.get("viture"):
             if not self.viture.winfo_ismapped():
                 self.viture.pack(fill="x", padx=2)

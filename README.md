@@ -60,6 +60,7 @@ The control panel:
   - **Deck screen**: the whole Deck screen as one window.
   - **App windows**: each open app as its own window, side by side around you.
 - **Adjust**: Recentre, Smaller and Bigger, Nearer and Further.
+- **Screen gap**, in Steady 6DoF: the space between screens, 0 to 120 pixels in steps of 10 (40 to start).
 - **Look at a window to bring it to the front.** In App windows, look at a window for a moment and it comes to
   the front on the Deck's screen, so touch, the trackpads and the keyboard work on it.
 - **Record**, in the Control Center and on the control panel: a 1080p video of exactly what you see, PC VR included,
