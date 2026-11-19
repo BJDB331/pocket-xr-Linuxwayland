@@ -26,6 +26,7 @@ from .gl import (GL_BGRA, GL_BLEND, GL_CLAMP_TO_EDGE, GL_COLOR_BUFFER_BIT, GL_LI
                  SDL_WINDOW_FULLSCREEN_DESKTOP, SDL_WINDOW_OPENGL, SDL_WINDOW_SKIP_TASKBAR, displays, gl, sdl,
                  split_displays)
 from . import pcvr as pcvrmod
+from .pcscreens import PcScreens
 from . import settingsctl
 from .i18n import tr
 from .recorder import Recorder
@@ -178,6 +179,9 @@ class App:
         self.capture.install_handler()
         self.capture.start()
         self.recorder = Recorder(self.log, on_saved=lambda path: self.events.put(("panel", "record_saved", path)))
+        # PC screens (pcscreens.py): its thread speaks through the event queue
+        self.pcscreens = PcScreens(self.log, say=lambda text: self.events.put(("panel", "pc_screen_say", text)),
+                                   opened=lambda slot: self.events.put(("panel", "pc_screen_opened", slot)))
         self.deckpad = DeckButtons(lambda n, k: self.events.put(("button", n, k)), log=self.log)
         self.deckpad.start()
         self.panel = self._start_panel()
@@ -533,6 +537,17 @@ class App:
                 self.space.save_places()
         elif cmd == "pcvr":
             self.stop_pcvr() if self.pcvr is not None else self.start_pcvr()
+        elif cmd == "pc_screen":
+            self.open_pc_screen()
+        elif cmd == "pc_screen_say":  # from the PC screens' thread, through the event queue
+            self.log(f"pc screens: says: {value}")
+            self.space.toast(value)
+            self.message = value
+            self._send_status()
+        elif cmd == "pc_screen_opened":
+            if self.settings["source"] != "apps":
+                self.set_source("apps")  # a PC screen is an app window: shown as one in the Space
+            self._send_status()
         elif cmd == "launcher":
             self.space.toggle_launcher()
         elif cmd == "cc":
@@ -589,6 +604,14 @@ class App:
         self.space.cc = None
         self.pcvr = pcvrmod.PcVr(self)
         self.log("pcvr: starting")
+
+    def open_pc_screen(self):
+        """PC screens: each press opens the next screen of the PC, up to three (pcscreens.py)."""
+        if self.pcvr is not None:
+            self.space.toast("Leave PC VR first.")
+            return
+        self.space.launcher = None
+        self.pcscreens.press()
 
     def stop_pcvr(self):
         """Closes the portal; once it has closed, PC VR stops (_finish_pcvr)."""
@@ -683,6 +706,7 @@ class App:
         self.space.save_places()
         if self.pcvr is not None:
             self.pcvr.close()
+        self.pcscreens.close_all()
         self.capture.restore_all()
         if self.control and self.control.link and not self.control.link.closed:
             self.control.restore(lambda: setattr(self, "done", True))
@@ -744,6 +768,7 @@ class App:
             "sbs_3d": self.settings.get("sbs_3d", True),
             "sbs_ok": bool(g and g.control_link),
             "pcvr": self.pcvr is not None,
+            "pc_screens": self.pcscreens.open_count(),
             "recording": self.recorder.wanted,
             "steady_ok": bool(g and g.steady_6dof),
             "flat": self._flat(),

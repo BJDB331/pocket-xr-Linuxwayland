@@ -759,6 +759,10 @@ class SpaceView:
             self._close_card("launcher", now)
             self._close_card("cc", now)
             self.app.start_pcvr()
+        elif a == "pc_screen":
+            self._close_card("launcher", now)
+            self._close_card("cc", now)
+            self.app.open_pc_screen()
         elif a == "page":
             self._page(it.arg)
         elif a == "launcher_close":
