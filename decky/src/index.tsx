@@ -20,6 +20,8 @@ type Status = {
   logs?: string;
   logs_error?: string;
   notice?: string; // already in the panel's language: e.g. XR Gaming's driver is running
+  actions?: { op: string; label: string }[]; // fixes the service offers, labels already in the panel's language
+  action_result?: string;
 };
 
 const request = callable<[req: Record<string, unknown>], Status>("request");
@@ -36,6 +38,7 @@ function Content() {
   const [st, setSt] = useState<Status | null>(null);
   const [size, setSize] = useState<number | null>(null);
   const [logs, setLogs] = useState<string | null>(null);
+  const [done, setDone] = useState<string | null>(null);
 
   useEffect(() => {
     let live = true;
@@ -66,6 +69,12 @@ function Content() {
     else setLogs(fill(w.logsFailed, { error: r.logs_error || r.why || "?" }));
   };
   const shownSize = size ?? Math.round((st?.size ?? 0.8) * 100);
+  const act = async (op: string) => {
+    setDone(null);
+    const r = await request({ op });
+    setSt(r);
+    setDone(r.action_result || r.why || null);
+  };
 
   return (
     <>
@@ -76,6 +85,18 @@ function Content() {
             <div style={{ fontSize: "13px", lineHeight: "18px", color: "#ffc857", marginTop: "6px" }}>{st.notice}</div>
           ) : null}
         </PanelSectionRow>
+        {(st?.actions || []).map((a) => (
+          <PanelSectionRow key={a.op}>
+            <ButtonItem layout="below" onClick={() => act(a.op)}>
+              {a.label}
+            </ButtonItem>
+          </PanelSectionRow>
+        ))}
+        {done ? (
+          <PanelSectionRow>
+            <div style={{ fontSize: "12px", lineHeight: "16px", color: "#b8bcbf" }}>{done}</div>
+          </PanelSectionRow>
+        ) : null}
       </PanelSection>
       <PanelSection title={w.view}>
         {modes.map((m) => (

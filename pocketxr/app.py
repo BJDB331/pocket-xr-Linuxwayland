@@ -127,10 +127,11 @@ def steamos():
 
 
 def steamos_wayland_text():
+    # It used to give the steamosctl command for X11. A tester's Deck (November 2026), after that switch, had a
+    # trackpad that moved but did not click, then hung at shutdown and at boot and came back at the first-run setup.
+    # So it no longer suggests the switch.
     return tr("Pocket XR's Desktop Mode needs Plasma on X11, and this SteamOS starts Desktop Mode on Wayland. "
-              "To change that, run this in Konsole: {command} Then go back to Gaming Mode and switch to Desktop "
-              "again. Or use Pocket XR in Gaming Mode.",
-              command="steamosctl set-default-desktop-session plasmax11.desktop")
+              "Use Pocket XR in Gaming Mode: it starts by itself there.")
 
 
 class App:

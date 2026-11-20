@@ -34,6 +34,8 @@ EFFECT = "PocketXR.fx"
 EFFECT_DIR = os.path.expanduser("~/.local/share/gamescope/reshade/Shaders")
 CONFIG = os.path.expanduser("~/.config/pocket-xr-deck/gaming.json")
 LOG = os.path.expanduser("~/.local/state/pocket-xr-deck/gaming.log")
+RAW_IMU = os.path.expanduser("~/.local/state/pocket-xr-deck/imu-raw.log")  # the Air family's first seconds, in full
+HEAD_LOG_S = 60.0  # the head's direction goes in the log once a second this long after glasses, a mode or a recentre
 FOV_V_DEG = 38.0  # the glasses' picture, vertical (as the desktop app)
 ASPECT = 16 / 9
 DEFAULTS = {"mode": "space", "size": 0.8}
@@ -105,11 +107,16 @@ class Gaming:
         self.reshade = None
         self.effect_on = False
         self.lock = threading.Lock()
-        self.other_driver = []  # XR Gaming's driver, looked for every few seconds while glasses are in
+        self.head_log_until = 0.0
+        self.head_logged = 0.0
+        self.other_driver = []  # XR Gaming's driver, looked for every few seconds
+        self.xr_gaming_enabled = False
+        self.session = None  # SteamOS's default Desktop Mode session
         self.other_checked = 0.0
         self.buttons = DeckButtons(self._button, log=log)
         self.buttons.start()
         threading.Thread(target=self._control_server, name="control", daemon=True).start()
+        threading.Thread(target=self._watch_other, name="other-driver", daemon=True).start()
 
     # ---- the Quick Access panel ----
     def status(self):
@@ -123,13 +130,54 @@ class Gaming:
             "size": float(self.settings.get("size", 0.8)),
             "lang": i18n.lang(),  # the Quick Access panel speaks the same language
             "notice": gmod.xr_gaming_text() if (self.glasses and self.other_driver) else "",
+            # Buttons the panel shows only when they would do something: [{"op", "label"}]
+            "actions": self._actions(),
         }
 
+    def _actions(self):
+        out = []
+        if self.other_driver or self.xr_gaming_enabled:
+            out.append({"op": "stop_xr_gaming", "label": i18n.tr("Stop XR Gaming's driver")})
+        if self.session == gmod.X11_SESSION:
+            out.append({"op": "wayland_back", "label": i18n.tr("Put the desktop back to Wayland")})
+        return out
+
+    def _do_action(self, op):
+        """Runs a panel button's command: the text the panel shows after it."""
+        if op == "stop_xr_gaming":
+            ok, out = gmod.stop_xr_gaming()
+            self.log(f"gaming: stop XR Gaming's driver ({gmod.XR_GAMING_STOP}): {'done' if ok else 'failed'}"
+                     + (f": {out}" if out else ""))
+            self._check_other_driver(time.monotonic())
+            if ok:
+                return i18n.tr("Done. XR Gaming's driver is stopped and won't start again. Unplug the glasses "
+                               "and plug them back in.")
+        elif op == "wayland_back":
+            ok, out = gmod.wayland_back()
+            self.log(f"gaming: desktop session set to {gmod.WAYLAND_SESSION}: {'done' if ok else 'failed'}"
+                     + (f": {out}" if out else ""))
+            self._check_other_driver(time.monotonic())
+            if ok:
+                return i18n.tr("Done. It applies the next time you switch to Desktop.")
+        else:
+            return ""
+        return i18n.tr("That didn't work: {error}", error=(out or "?").splitlines()[-1][:200])
+
+    def _watch_other(self):
+        """Every 5 s, off the head-update loop: XR Gaming's driver and SteamOS's desktop session (commands that take
+        a moment)."""
+        while True:
+            try:
+                self._check_other_driver(time.monotonic())
+            except Exception as e:  # noqa: BLE001
+                self.log(f"gaming: checking for XR Gaming failed ({e})")
+            time.sleep(5.0)
+
     def _check_other_driver(self, now):
-        if now - self.other_checked < 5.0:
-            return
         self.other_checked = now
-        found = gmod.xr_gaming_running() if self.glasses else []
+        found = gmod.xr_gaming_running()
+        self.xr_gaming_enabled = bool(gmod.xr_gaming_installed()) and gmod.xr_gaming_enabled()
+        self.session = gmod.desktop_session() if shutil.which("steamosctl") else None
         if found != self.other_driver:
             if found:
                 self.log("gaming: XR Gaming's driver is running (" +
@@ -149,6 +197,8 @@ class Gaming:
             except OSError as e:
                 self.log(f"gaming: could not make the logs ({e})")
                 return dict(self.status(), logs_error=str(e))
+        if op in ("stop_xr_gaming", "wayland_back"):  # commands that take a moment: not under the lock
+            return dict(self.status(), action_result=self._do_action(op))
         with self.lock:
             if op == "set_mode" and req.get("mode") in ("space", "steady", "off"):
                 self.settings["mode"] = req["mode"]
@@ -202,7 +252,23 @@ class Gaming:
             elif name == "R4":
                 self.next_mode()
 
+    def _log_head(self, now):
+        """Once a second for a while: where the head points, what the motion sensor reads, so a log shows motion."""
+        if self.head is None or now > self.head_log_until or now - self.head_logged < 1.0:
+            return
+        self.head_logged = now
+        w, x, y, z = self.head.view()
+        f = fusion.qrot((w, x, y, z), (0.0, 0.0, -1.0))
+        yaw = math.degrees(math.atan2(-f[0], -f[2])) + 0.0  # no "-0.0" in the log
+        pitch = math.degrees(math.asin(max(-1.0, min(1.0, f[1])))) + 0.0
+        g = self.head.last_gyro
+        turn = math.degrees(math.sqrt(g[0] ** 2 + g[1] ** 2 + g[2] ** 2))
+        self.log(f"gaming: head yaw {yaw:.1f}, pitch {pitch:.1f} degrees; turning {turn:.1f} deg/s; "
+                 f"gravity {self.head.g_mag or 0:.2f} m/s2; still-bias {'ready' if self.head.bias_ready else 'not yet'}; "
+                 f"{self.head.count} reports")
+
     def recentre(self):
+        self.head_log_until = time.monotonic() + HEAD_LOG_S
         if self.head:
             self.head.recentre()
         if self.control and self.mode() == "steady":
@@ -233,6 +299,7 @@ class Gaming:
 
     def _apply_mode(self):
         m = self.mode()
+        self.head_log_until = time.monotonic() + HEAD_LOG_S
         if isinstance(self.reader, hidimu.AirReader):
             # Off leaves the Air family's glasses alone: no motion stream, and on the XBX no MCU heartbeat.
             paused = self.settings.get("mode", "space") == "off"
@@ -304,7 +371,7 @@ class Gaming:
         if g.imu == "network":
             self.reader = imu.ImuReader(self.head.report, log=self.log)
         elif g.imu == "air":
-            self.reader = hidimu.AirReader(self.head.report, g.product, log=self.log)
+            self.reader = hidimu.AirReader(self.head.report, g.product, log=self.log, record_path=RAW_IMU)
         elif g.imu == "viture" and g.viture_tracking_default():
             self.reader = hidimu.VitureReader(self.head.report, g.product, log=self.log)
         if self.reader:
@@ -384,7 +451,7 @@ class Gaming:
                         if self.reshade is None:
                             self._connect_gamescope()
                         self._check_glasses()
-                        self._check_other_driver(now)
+                        self._log_head(now)
                         if self.glasses and self.reshade and not self.effect_on and self.mode() == "space":
                             self._effect(True)
                     else:

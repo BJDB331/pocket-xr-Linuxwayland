@@ -31,9 +31,11 @@ Pocket XR then appears on the desktop and in the app menu, and starts by itself 
 needed. It installs into your home folder, so SteamOS updates leave it alone. Run the same line again to update.
 
 Pocket XR's own Desktop Mode view needs KDE Plasma on X11. The SteamOS 3.9.5 Decks we have seen start Desktop Mode
-on Wayland. To change that, run `steamosctl set-default-desktop-session plasmax11.desktop` in Konsole, then go back
-to Gaming Mode and switch to Desktop again (not yet tried; `plasma.desktop` puts Wayland back). Your Deck on your
-phone (below) needs Wayland, so it stops working on X11. Gaming Mode works either way.
+on Wayland, so on those use Pocket XR in Gaming Mode. Please don't switch SteamOS's desktop to X11 for it: a tester's
+Deck had trouble after that switch (a trackpad that would not click, then hangs at shutdown and boot). If you already
+switched, this in Konsole puts Wayland back, from the next time you switch to Desktop:
+`steamosctl set-default-desktop-session plasma.desktop` (or press **Put the desktop back to Wayland** in Quick
+Access). Your Deck on your phone (below) needs Wayland.
 
 Not on SteamOS? On a Wayland desktop (the default on CachyOS, Bazzite and others) log out and pick **Plasma (X11)**, or use Gaming Mode. If a back button also opens your
 desktop's own menu, your system has mapped that button too: clear it in Steam's desktop controller layout or your
@@ -185,14 +187,15 @@ The same glasses as Pocket XR on Android:
 | XREAL Aura | Yes | Yes. Pocket XR turns the Aura's Spatial Anchor on and off for you. | Yes |
 | XREAL One, One Pro, One Pro+, 1S | Yes | With the XREAL Eye. You turn 6DoF on in the glasses' menu when asked. | Not yet: please try it |
 | XREAL Air, Air 2, Air 2 Pro, Air 2 Ultra | Yes | No | Not yet: please try it |
-| XREAL XBX A01, A01+ | Not yet working: on 0.6.0 an A01+ sent no motion. 0.6.1 also wakes the glasses' controller first, as XR Gaming's driver does (untested) | No | Yes (A01+), no head tracking yet |
+| XREAL XBX A01, A01+ | Not yet working: since 0.6.1 an A01+ sends motion, but the screen did not hold still yet (XR Gaming's driver was also running) | No | Yes (A01+), no head tracking yet |
 | VITURE Beast | Yes | No (waits on VITURE's SDK) | Not yet: please try it |
 | Other VITURE glasses | Experimental, off until you turn it on in the panel | No | Not yet: please try it |
 | Other glasses | No, the windows are shown flat | No | Not yet: please try it |
 
-**XR Gaming installed too?** Its driver talks to the same glasses, so Pocket XR's head tracking may get nothing while
-it runs. Pocket XR says so in the panel and in Quick Access when it sees XR Gaming's driver running: turn XR Gaming off
-or uninstall it.
+**XR Gaming installed too?** Its driver, `xrDriver`, talks to the same glasses and sets the game screen's effect in
+Gaming Mode itself, so the two get in each other's way. Removing the XR Gaming plugin from Decky leaves the driver
+running (seen on a tester's Deck). Pocket XR says so in the panel and in Quick Access when it sees it. To stop it, run
+this in Konsole: `systemctl --user disable --now xr-driver`, or press **Stop XR Gaming's driver** in Quick Access.
 
 Settings on the glasses themselves, as on Android:
 
@@ -232,7 +235,8 @@ Fixes and new support that came from your reports:
 - Thanks to Pierre Zammit for his Steam Deck logs with the XREAL XBX A01+, which led to head tracking for the XBX A01
   and A01+ (0.6.0).
 - Thanks to Pierre Zammit again for testing 0.6.0 with his A01+ and sending logs, which led to the XBX changes and
-  the XR Gaming check in 0.6.1.
+  the XR Gaming check in 0.6.1, and for his 0.6.1 logs, which showed the motion arriving and led to 0.6.2's
+  changes.
 
 ## Support
 

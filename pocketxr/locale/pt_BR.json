@@ -189,6 +189,11 @@
   "Pocket XR's Desktop Mode needs a Plasma (X11) session. Wayland isn't supported yet. Log out and pick Plasma (X11), or use Gaming Mode.": "O modo desktop do Pocket XR precisa de uma sessão Plasma (X11). O Wayland ainda não é compatível. Saia da sessão e escolha Plasma (X11), ou use o modo de jogo.",
   "Screen gap": "Espaço entre telas",
   "The space between screens in Steady mode.": "O espaço entre as telas no modo Steady.",
-  "Pocket XR's Desktop Mode needs Plasma on X11, and this SteamOS starts Desktop Mode on Wayland. To change that, run this in Konsole: {command} Then go back to Gaming Mode and switch to Desktop again. Or use Pocket XR in Gaming Mode.": "O modo desktop do Pocket XR precisa do Plasma em X11, e este SteamOS inicia o modo desktop em Wayland. Para mudar isso, execute no Konsole: {command} Depois volte ao modo de jogo e mude para o desktop de novo. Ou use o Pocket XR no modo de jogo.",
-  "XR Gaming is running; turn it off for Pocket XR's head tracking (or uninstall it).": "O XR Gaming está rodando; desligue-o (ou desinstale) para usar o rastreamento de cabeça do Pocket XR."
+  "Pocket XR's Desktop Mode needs Plasma on X11, and this SteamOS starts Desktop Mode on Wayland. Use Pocket XR in Gaming Mode: it starts by itself there.": "O modo Desktop do Pocket XR precisa do Plasma em X11, e este SteamOS inicia o modo Desktop em Wayland. Use o Pocket XR no modo Jogo: lá ele inicia sozinho.",
+  "XR Gaming's driver is running, even with its plugin removed, and it takes the glasses and the game screen. Stop it in Konsole: {command}": "O driver do XR Gaming continua rodando, mesmo com o plugin removido, e toma os óculos e a tela do jogo. Pare-o no Konsole: {command}",
+  "Stop XR Gaming's driver": "Parar o driver do XR Gaming",
+  "Put the desktop back to Wayland": "Voltar o desktop para Wayland",
+  "Done. XR Gaming's driver is stopped and won't start again. Unplug the glasses and plug them back in.": "Pronto. O driver do XR Gaming parou e não vai iniciar de novo. Desconecte os óculos e conecte de novo.",
+  "Done. It applies the next time you switch to Desktop.": "Pronto. Vale a partir da próxima vez que você mudar para o Desktop.",
+  "That didn't work: {error}": "Não funcionou: {error}"
 }
