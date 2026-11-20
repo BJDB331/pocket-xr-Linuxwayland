@@ -462,7 +462,7 @@ class PcScreens:
 
     def _find_pc(self):
         """(address, PC name, (helper port) or None): the PC helper first, else the PC saved last time, else the
-        first streaming host mDNS finds."""
+        first streaming host mDNS finds. Never this machine: its own host shows it on a phone's glasses."""
         found = pchelper.find(4.0, stop=lambda: self.stop)
         if found:
             host, port, name = found
@@ -470,9 +470,11 @@ class PcScreens:
             self.log(f"pc screens: PC helper on {name} ({host})")
             return host, name, port
         saved = self._saved()
-        if saved.get("host") and serverinfo(saved["host"], DEFAULT_PORT):
+        if saved.get("host") and not pchelper.is_local(saved["host"]) and serverinfo(saved["host"], DEFAULT_PORT):
             return saved["host"], saved.get("pc") or saved["host"], None
         for name, host, _ in browse():
+            if pchelper.is_local(host):
+                continue  # this machine's own host is for a phone's glasses, not these
             self._save({"host": host, "pc": name})
             self.log(f"pc screens: found {name} ({host}) by mDNS; no PC helper")
             return host, name, None

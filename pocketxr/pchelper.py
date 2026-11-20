@@ -26,8 +26,26 @@ def parse_here(data):
         return None
 
 
+def is_local(address):
+    """Whether [address] is this machine's own: its own helper (Pocket XR's host answers 47610 too) is never the PC
+    to show. Sending from a socket aimed at the address picks the source address; it is the address itself only when
+    the address is this machine's."""
+    try:
+        if address.startswith("127.") or address == "::1":
+            return True
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            s.connect((address, 9))
+            return s.getsockname()[0] == address
+        finally:
+            s.close()
+    except OSError:
+        return False
+
+
 def find(timeout=6.0, stop=lambda: False):
-    """(address, tcp port, PC name) of the first helper that answers, or None."""
+    """(address, tcp port, PC name) of the first helper that answers, or None. This machine's own helper is passed
+    over."""
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
         s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
@@ -43,7 +61,7 @@ def find(timeout=6.0, stop=lambda: False):
                 time.sleep(0.5)
                 continue
             here = parse_here(data)
-            if here:
+            if here and not is_local(addr[0]):
                 return addr[0], here[0], here[1]
         return None
     finally:

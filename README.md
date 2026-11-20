@@ -137,6 +137,14 @@ Hold them like remotes, pointing forward. Each one points ahead by itself when i
 sideways a little; press Capture or Home to point it ahead again. Steam turns the Joy-Cons' motion sensors off;
 Pocket XR turns them on while PC VR runs, and off again after.
 
+## Your Deck on your phone
+
+New, and not yet tried with a phone: Pocket XR on your phone can show this Deck's screens as its PC screens, up to
+three, each at the shape of its window. In Desktop Mode the Deck answers the phone by itself, with nothing else to
+install. Put both on the same network. The first time, the Deck asks whether to allow the phone. It replaces the
+Pocket XR PC Screens app; the installer switches that app off. How it works and what has been checked:
+`docs/HOST-DECK.md`.
+
 ## More
 
 Holding the pointer against the right edge of the Deck's screen for a second also recentres.
@@ -212,8 +220,12 @@ glasses report helps just as much.
 
 ```bash
 python3 tests/test_offline.py   # checks that need no glasses or screen
+python3 tests/test_host.py      # the Deck host's parts that need no Deck
+native/host/build.sh            # the host's programs (in WSL Ubuntu or Linux)
 ./make-release.sh               # dist/pocket-xr-deck.tar.gz
 ```
+
+On a Deck, `tools/host_check.py` checks a running host from the phone's side.
 
 `docs/FEASIBILITY.md` covers why the Deck version is built this way, how it compares to Breezy Desktop, and the test
 results on a real Deck.
@@ -229,3 +241,10 @@ unmodified, as Pocket XR on Android bundles them.
 
 PC VR uses ALVR's client library (https://github.com/alvr-org/ALVR, MIT licence), built from the same source as
 Pocket XR on Android, and the Deck's own FFmpeg to decode the video.
+
+The Deck host (`pocketxr/host`, `native/host`) ports its protocol from Sunshine (https://github.com/LizardByte/Sunshine)
+and Apollo (https://github.com/ClassicOldSong/Apollo), both GPLv3, and is compatible with Moonlight. It builds in
+moonlight-common-c's ENet fork (https://github.com/moonlight-stream/moonlight-common-c; ENet by Lee Salzman, MIT
+licence) and nanors (https://github.com/sleepybishop/nanors; Joseph Calderon, MIT licence), whose licence texts are
+in `native/host/third_party/`, and KDE's screencast protocol description (LGPL-2.1-or-later). It uses the Deck's own
+FFmpeg, PipeWire, OpenSSL and Opus.

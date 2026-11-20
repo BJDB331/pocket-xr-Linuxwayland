@@ -5,8 +5,10 @@ been tried, it records what was seen.
 
 ## What it does
 
-The **PC screen** button (on the launcher card next to PC VR, and on the control panel) opens a screen of your
-Windows PC as a window in the Space. Each press opens the next one, up to three, as on Android.
+The **Show a PC** button (on the launcher card next to PC VR, and on the control panel) opens a screen of your
+Windows PC as a window in the Space, in the glasses plugged into this Deck. Each press opens the next one, up to
+three, as on Android. With no glasses plugged in, it says so and opens nothing. This Deck itself is never offered:
+for glasses on a phone, the phone opens PC screens and this Deck is the computer (`docs/HOST-DECK.md`).
 
 The PC runs Apollo plus two more Apollo instances, set up by **Set up PC screens** in the Pocket XR PC helper (the
 same setup Android uses). Each instance makes its own virtual display.

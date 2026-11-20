@@ -227,10 +227,10 @@ def glasses_report(root="/sys/bus/usb/devices"):
 
 
 def log_files(home):
-    """Pocket XR's logs, newest first: the app's, the Gaming Mode service's, then rotated copies, then Moonlight's
-    for PC screens (pcscreens.py)."""
+    """Pocket XR's logs, newest first: the app's, the Gaming Mode service's, the host's (pocketxr/host), then rotated
+    copies, then Moonlight's for PC screens (pcscreens.py)."""
     state = _state_dir(home)
-    main = [os.path.join(state, n) for n in ("pocket-xr.log", "gaming.log")]
+    main = [os.path.join(state, n) for n in ("pocket-xr.log", "gaming.log", "host.log")]
     rotated = sorted(glob.glob(os.path.join(state, "*.log.*")), key=lambda p: -os.path.getmtime(p))
     moonlight = sorted(glob.glob(os.path.join(state, "moonlight-*.log")))
     return [p for p in main if os.path.isfile(p)] + rotated + moonlight

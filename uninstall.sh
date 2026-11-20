@@ -3,7 +3,9 @@
 set -euo pipefail
 
 systemctl --user disable --now pocket-xr-gaming.service >/dev/null 2>&1 || true
-rm -f "$HOME/.config/systemd/user/pocket-xr-gaming.service" "$HOME/.local/share/gamescope/reshade/Shaders/PocketXR.fx"
+systemctl --user disable --now pocket-xr-host.service >/dev/null 2>&1 || true
+rm -f "$HOME/.config/systemd/user/pocket-xr-gaming.service" "$HOME/.config/systemd/user/pocket-xr-host.service" \
+      "$HOME/.local/share/gamescope/reshade/Shaders/PocketXR.fx"
 systemctl --user daemon-reload >/dev/null 2>&1 || true
 if [ -d "$HOME/homebrew/plugins/PocketXR" ] && [ -O "$HOME/homebrew/plugins" ]; then
   chmod u+w "$HOME/homebrew/plugins" && chmod -R u+w "$HOME/homebrew/plugins/PocketXR"
@@ -15,6 +17,7 @@ fi
 rm -rf "$HOME/.local/share/pocket-xr-deck"
 rm -f "$HOME/.local/bin/pocket-xr" \
       "$HOME/.local/share/applications/pocket-xr.desktop" \
+      "$HOME/.local/share/applications/pocket-xr-host.desktop" \
       "$HOME/Desktop/pocket-xr.desktop" \
       "$HOME/.local/share/icons/hicolor/512x512/apps/pocket-xr.png"
 rm -rf "$HOME/.local/share/fonts/pocket-xr"

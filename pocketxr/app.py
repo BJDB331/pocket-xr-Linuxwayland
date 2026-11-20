@@ -56,6 +56,10 @@ LOOK_DWELL_S = 0.6
 FOV_V_DEG = 38.0  # the Aura's picture, vertical, per eye (about 70 degrees diagonal)
 
 
+# Show a PC is for glasses plugged into this machine (English only for now, as the PC screens' other lines).
+NO_GLASSES_FOR_PC = "No glasses are plugged into this Deck. Glasses on a phone open PC screens from the phone."
+
+
 class Log:
     def __init__(self):
         os.makedirs(STATE, exist_ok=True)
@@ -606,7 +610,14 @@ class App:
         self.log("pcvr: starting")
 
     def open_pc_screen(self):
-        """PC screens: each press opens the next screen of the PC, up to three (pcscreens.py)."""
+        """Show a PC: each press opens the next screen of another computer in the glasses plugged into this machine,
+        up to three (pcscreens.py). Glasses on a phone open PC screens from the phone; this machine's own host serves
+        them (pocketxr/host)."""
+        if self.glasses is None:
+            self.message = NO_GLASSES_FOR_PC
+            self.space.toast(NO_GLASSES_FOR_PC)
+            self._send_status()
+            return
         if self.pcvr is not None:
             self.space.toast("Leave PC VR first.")
             return

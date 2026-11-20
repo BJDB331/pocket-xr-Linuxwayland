@@ -78,6 +78,52 @@ systemctl --user daemon-reload >/dev/null 2>&1 || true
 systemctl --user enable pocket-xr-gaming.service >/dev/null 2>&1 || true
 systemctl --user restart pocket-xr-gaming.service >/dev/null 2>&1 || true
 
+# PC screens with this Deck as the computer (pocketxr/host): the phone's Pocket XR shows the Deck's screens, each a
+# KWin virtual output at the phone's window shape. A service in Desktop Mode (Plasma) only. KWin lets the picture's
+# program make virtual outputs only when a desktop file names it: written here, hidden from the menus.
+HOST=""
+if [ -x "$DEST/native/pxr-host-video" ] && [ -f "$DEST/native/libpxr_host.so" ]; then
+  cat > "$APPS/pocket-xr-host.desktop" <<EOF
+[Desktop Entry]
+Type=Application
+Name=Pocket XR host
+Comment=Pocket XR's PC screens: this Deck's screens on your phone
+Exec=$DEST/native/pxr-host-video
+NoDisplay=true
+X-KDE-Wayland-Interfaces=zkde_screencast_unstable_v1
+EOF
+  kbuildsycoca6 >/dev/null 2>&1 || true
+  # It takes the place of the Pocket XR PC Screens app (Sunshine in a Flatpak) and its helper: the same ports. Its
+  # certificate and paired phones are taken over at the host's first start, so a paired phone stays paired.
+  for unit in pocketxr-sunshine@1 pocketxr-sunshine@2 pocketxr-sunshine@3 pocketxr-pc-helper; do
+    if systemctl --user is-enabled "$unit.service" >/dev/null 2>&1 || systemctl --user is-active "$unit.service" >/dev/null 2>&1; then
+      systemctl --user disable --now "$unit.service" >/dev/null 2>&1 || true
+      HOST=replaced
+    fi
+  done
+  cat > "$UNITS/pocket-xr-host.service" <<EOF
+[Unit]
+Description=Pocket XR host: this Deck's screens on the phone's PC screens (Desktop Mode)
+After=plasma-workspace.target
+PartOf=graphical-session.target
+
+[Service]
+WorkingDirectory=$DEST
+ExecStart=/usr/bin/python3 -m pocketxr.host
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=plasma-workspace.target
+EOF
+  systemctl --user daemon-reload >/dev/null 2>&1 || true
+  systemctl --user enable pocket-xr-host.service >/dev/null 2>&1 || true
+  if systemctl --user is-active plasma-workspace.target >/dev/null 2>&1; then
+    systemctl --user restart pocket-xr-host.service >/dev/null 2>&1 || true
+  fi
+  [ -n "$HOST" ] || HOST=yes
+fi
+
 # Gaming Mode's Quick Access panel, for Decky Loader (https://decky.xyz), when Decky is installed. Where Decky's
 # plugins folder belongs to this user (read-only), it is opened, filled and closed again without a password. Where it
 # belongs to root, only Decky can add the panel: from the release's pocket-xr-decky.zip, by its Install from URL.
@@ -97,6 +143,12 @@ fi
 
 echo "Done. Pocket XR $(cat "$SRC/VERSION") is on the desktop and in the app menu."
 echo "Plug in your glasses and open it from Desktop Mode. In Gaming Mode it starts by itself."
+if [ "$HOST" = replaced ]; then
+  echo "Your phone's PC screens now reach this Deck through Pocket XR itself: the PC Screens app's Sunshine and helper"
+  echo "are switched off (flatpak uninstall com.hayeco.pocketxr.PCScreens removes it)."
+elif [ -n "$HOST" ]; then
+  echo "Your phone's Pocket XR can show this Deck's screens (PC screens) while it is in Desktop Mode."
+fi
 want=$(grep -o '"version": *"[^"]*"' "$SRC/decky/package.json" 2>/dev/null || true)
 have=$(grep -o '"version": *"[^"]*"' "$PLUGINS/PocketXR/package.json" 2>/dev/null || true)
 if [ -n "$PANEL" ]; then
