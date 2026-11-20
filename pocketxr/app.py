@@ -363,6 +363,11 @@ class App:
         if self.reader:
             self.reader.start()
         self.message = g.why_no_tracking(self._viture_on() if g.family == "viture" else None) or ""
+        other = gmod.xr_gaming_running()
+        if other:
+            self.log("XR Gaming's driver is running (" + ", ".join(f"{n}, pid {p}" for p, n in other) +
+                     "); it talks to the same glasses")
+            self.message = gmod.xr_gaming_text()
 
     def _tracking(self):
         return self.reader is not None

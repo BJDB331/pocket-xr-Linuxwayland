@@ -5,7 +5,7 @@ SteamOS gives the signed-in user every hidraw device (70-steam-jupiter-input.rul
 Writes to hidraw go out as they are when the first byte is not 0, which holds for both protocols' frames.
 
 Air family: 64 byte reports on HID interface 3 (2 on the Air 2 Ultra, 1 on the XBX A01 and A01+, whose MCU is on 0);
-command 0x19 with 1 starts the stream.
+command 0x19 with 1 starts the stream. The XBX may also want its MCU woken first (see AIR_XBX).
 VITURE: frames with preamble 0x0010; 0x0301 (raw stream, rate index 2 = 120 Hz) starts it, 0x7309 carries a sample.
 Pocket XR found the Beast takes no new command while an answer of its own is unread, so what is waiting is read first.
 """
@@ -25,9 +25,19 @@ DEG = math.pi / 180
 AIR_MODELS = {0x0424: "XREAL Air", 0x0428: "XREAL Air 2", 0x0432: "XREAL Air 2 Pro", 0x0426: "XREAL Air 2 Ultra",
               0x0440: "XREAL XBX A01", 0x0442: "XREAL XBX A01+"}
 AIR_ULTRA = 0x0426
-# XBX A01 and A01+: the IMU on interface 1, the MCU on 0 (wheaney's nrealAirLinuxDriver, hid_ids.c, MIT). Not yet
-# tried with Pocket XR: a tester's A01+ (November 2026) showed three HID interfaces, 0 to 2, each with 64 byte reports.
+# XBX A01 and A01+: the IMU on interface 1, the MCU on 0 (wheaney's nrealAirLinuxDriver, hid_ids.c, MIT). A tester's
+# A01+ (November 2026) showed three HID interfaces, 0 to 2, each with 64 byte reports. With 0.6.0 its interface 1 sent
+# nothing at all after the stream command. The same library marks these two as needing an MCU "heartbeat": on interface
+# 0, commands 0x26, 0x57, 0x12 (1), 0x02 (1), 0x34, 0x35, then 0x31 with the SDK version "3.1.1", then 0x1A with the
+# time every 100 ms; its comment says this gates the IMU stream (sequence found by taowen's ar-glass-lib). So the
+# reader tries interface 1 alone first, then with the heartbeat, then interface 2, and logs what each gives.
 AIR_XBX = frozenset({0x0440, 0x0442})
+XBX_MCU = 0
+MCU_HEAD = 0xFD
+MCU_HEARTBEAT = 0x1A
+MCU_SDK_VERSION = b"3.1.1"
+MCU_BOOTSTRAP = ((0x26, b""), (0x57, b""), (0x12, b"\x01\x00\x00\x00"), (0x02, b"\x01\x00\x00\x00"),
+                 (0x34, b""), (0x35, b""), (0x31, MCU_SDK_VERSION))
 
 
 def air_interface(pid):
@@ -54,6 +64,24 @@ def air_command(cmd_id, data=b""):
 
 def air_stream(on=True):
     return air_command(0x19, bytes([1 if on else 0]))
+
+
+def mcu_command(msg_id, data=b"", timestamp=0):
+    """An XREAL MCU frame: 0xFD, CRC-32 of what follows it from the length on, the length (17 + data), a timestamp,
+    the message id, 5 reserved bytes, the data. Sent as it is, not padded (as hidapi's hid_write does there)."""
+    length = 17 + len(data)
+    body = struct.pack("<HQH", length, timestamp, msg_id) + bytes(5) + bytes(data)
+    return bytes([MCU_HEAD]) + struct.pack("<I", zlib.crc32(body) & 0xFFFFFFFF) + body
+
+
+def mcu_heartbeat():
+    return mcu_command(MCU_HEARTBEAT, struct.pack("<Q", time.monotonic_ns()))
+
+
+def hexstart(data, n=16):
+    """The first bytes of a report in hex, for the log."""
+    data = bytes(data)
+    return data[:n].hex(" ") + (" ..." if len(data) > n else "") + f" ({len(data)} bytes)"
 
 
 def _i24(p, i):
@@ -198,6 +226,11 @@ class VitureClock:
 # ---------------- finding the device ----------------
 def hidraw_nodes(vendor, product=None):
     """[(interface number, /dev/hidrawN, product id)] for a vendor's USB HID devices."""
+    return [n[:3] for n in hidraw_map(vendor, product)]
+
+
+def hidraw_map(vendor, product=None):
+    """[(interface number, /dev/hidrawN, product id, sysfs path of the interface)]."""
     out = []
     for h in sorted(glob.glob("/sys/class/hidraw/hidraw*")):
         dev = os.path.realpath(os.path.join(h, "device"))
@@ -210,7 +243,7 @@ def hidraw_nodes(vendor, product=None):
         except (OSError, ValueError):
             continue
         if vid == vendor and (product is None or pid == product):
-            out.append((num, "/dev/" + os.path.basename(h), pid))
+            out.append((num, "/dev/" + os.path.basename(h), pid, iface_dir))
     return out
 
 
@@ -233,40 +266,210 @@ class _HidReader(threading.Thread):
 
 
 class AirReader(_HidReader):
-    def __init__(self, on_report, pid, log=print):
+    """Reads the Air family's IMU. Each time the glasses appear it logs which hidraw node is which interface, and the
+    first bytes of whatever the glasses' nodes send. On the XBX, if interface 1 stays silent it wakes the MCU on
+    interface 0 (the heartbeat above) and tries again, then tries interface 2, and logs which one streamed."""
+    WAIT_S = 6.0         # how long an interface may stay silent before the next one is tried
+    RETRY_S = 10.0       # after every interface was silent
+    LOGGED_PER_NODE = 12  # raw reports logged per node per try
+
+    def __init__(self, on_report, pid, log=print, nodes=None, opener=None):
         super().__init__(on_report, log)
         self.pid = pid
+        self.paused = False  # Gaming Mode's "off": no stream and no heartbeat, so the glasses are left alone
+        self._nodes = nodes or (lambda: hidraw_map(0x3318, self.pid))
+        self._open = opener or (lambda path: os.open(path, os.O_RDWR))
+        self._logged = {}
+        self._mcu = None  # (fd, thread, state) while the heartbeat runs
+        self.decision = None
+
+    # ---- raw bytes in the log ----
+    def _note(self, dev, data, what="read"):
+        n = self._logged.get(dev, 0)
+        if n < self.LOGGED_PER_NODE:
+            self._logged[dev] = n + 1
+            self.log(f"imu: {dev} {what} {hexstart(data)}")
+
+    def _read(self, fd, dev):
+        data = os.read(fd, 64)
+        self._note(dev, data)
+        return data
+
+    def _drain(self, fd, seconds=0.3, dev="?"):
+        end = time.monotonic() + seconds
+        while time.monotonic() < end:
+            r, _, _ = select.select([fd], [], [], max(0.0, end - time.monotonic()))
+            if not r:
+                return
+            self._read(fd, dev)
+
+    def _wait_ok(self, seconds):
+        end = time.monotonic() + seconds
+        while time.monotonic() < end and not self.stop and not self.paused:
+            time.sleep(min(0.2, max(0.0, end - time.monotonic())))
+
+    # ---- the XBX's MCU ----
+    def _mcu_ask(self, fd, dev, msg_id, data=b""):
+        """Sends one MCU command and waits up to 2 s for any 0xFD frame back (the library takes any as the answer)."""
+        os.write(fd, mcu_command(msg_id, data))
+        end = time.monotonic() + 2.0
+        while time.monotonic() < end:
+            r, _, _ = select.select([fd], [], [], max(0.0, end - time.monotonic()))
+            if r and self._read(fd, dev)[:1] == bytes([MCU_HEAD]):
+                return True
+        return False
+
+    def _start_mcu(self, node):
+        num, dev = node[0], node[1]
+        try:
+            fd = self._open(dev)
+        except OSError as e:
+            self.log(f"imu: MCU {dev} not open ({e})")
+            return False
+        try:
+            self._drain(fd, 0.2, dev)
+            for msg_id, data in MCU_BOOTSTRAP:
+                ok = self._mcu_ask(fd, dev, msg_id, data)
+                self.log(f"imu: MCU command 0x{msg_id:02x} on interface {num}: {'answered' if ok else 'no answer'}")
+                if not ok:
+                    os.close(fd)
+                    return False
+            for _ in range(2):
+                self._mcu_ask(fd, dev, MCU_HEARTBEAT, struct.pack("<Q", time.monotonic_ns()))
+        except OSError as e:
+            self.log(f"imu: MCU on {dev} failed ({e})")
+            os.close(fd)
+            return False
+        state = {"run": True}
+
+        def beat():
+            while state["run"] and not self.stop:
+                try:
+                    os.write(fd, mcu_heartbeat())
+                    r, _, _ = select.select([fd], [], [], 0.1)
+                    while r:  # answers and button reports: read so they don't pile up, the first few logged
+                        self._read(fd, dev)
+                        r, _, _ = select.select([fd], [], [], 0)
+                except OSError as e:
+                    if state["run"]:
+                        self.log(f"imu: MCU heartbeat stopped ({e})")
+                    return
+        t = threading.Thread(target=beat, daemon=True, name="xbx-heartbeat")
+        self._mcu = (fd, t, state)
+        t.start()
+        self.log(f"imu: MCU heartbeat running on interface {num} ({dev})")
+        return True
+
+    def _stop_mcu(self):
+        if not self._mcu:
+            return
+        fd, t, state = self._mcu
+        state["run"] = False
+        t.join(1.0)
+        try:
+            os.close(fd)
+        except OSError:
+            pass
+        self._mcu = None
+        self.log("imu: MCU heartbeat stopped")
+
+    # ---- the IMU ----
+    def _try_imu(self, node, seconds):
+        """Opens an interface, asks for the stream and waits for 0x01 0x02 samples. Returns the open fd once they
+        come, else None."""
+        num, dev = node[0], node[1]
+        try:
+            fd = self._open(dev)
+        except OSError as e:
+            self.log(f"imu: {dev} not open ({e})")
+            return None
+        try:
+            self._drain(fd, 0.3, dev)
+            os.write(fd, air_stream(True))
+            self.log(f"imu: Air stream asked for on {dev} (interface {num})")
+            end = time.monotonic() + seconds
+            while time.monotonic() < end and not self.stop and not self.paused:
+                r, _, _ = select.select([fd], [], [], max(0.0, min(0.5, end - time.monotonic())))
+                if r and air_parse(self._read(fd, dev)):
+                    return fd
+            if not self.stop and not self.paused:
+                self.log(f"imu: no samples on interface {num} in {seconds:g} s")
+        except OSError as e:
+            self.log(f"imu: {dev} failed ({e})")
+        try:
+            os.write(fd, air_stream(False))
+        except OSError:
+            pass
+        os.close(fd)
+        return None
+
+    def _find(self, nodes):
+        """(fd, node) of the interface that streams, tried in the order the class docstring gives, else (None, None)."""
+        for n in nodes:
+            self.log(f"imu: {os.path.basename(n[1])} is interface {n[0]}" + (f" ({n[3]})" if len(n) > 3 else ""))
+        self._logged = {}
+        by_num = {n[0]: n for n in nodes}
+        first = by_num.get(air_interface(self.pid))
+        if first:
+            fd = self._try_imu(first, self.WAIT_S)
+            if fd is not None:
+                return fd, first
+        if self.pid not in AIR_XBX or self.stop or self.paused:
+            return None, None
+        if XBX_MCU in by_num and self._start_mcu(by_num[XBX_MCU]) and first:
+            fd = self._try_imu(first, self.WAIT_S)
+            if fd is not None:
+                return fd, first
+        for num in sorted(by_num):
+            if num in (XBX_MCU, air_interface(self.pid)) or self.stop or self.paused:
+                continue
+            fd = self._try_imu(by_num[num], self.WAIT_S)
+            if fd is not None:
+                return fd, by_num[num]
+        self._stop_mcu()
+        return None, None
+
+    def _stream(self, fd, dev, first_report=None):
+        clock = AirTimestamp()
+        quiet = 0
+        while not self.stop and not self.paused:
+            r, _, _ = select.select([fd], [], [], 2.0)
+            if not r:
+                quiet += 1
+                if quiet >= 3:
+                    self.log("imu: samples stopped for 6 s; looking again")
+                    return
+                self.log("imu: no Air reports for 2 s; asking again")
+                os.write(fd, air_stream(True))
+                continue
+            rep = air_parse(self._read(fd, dev))
+            if rep:
+                quiet = 0
+                ts, g, a = rep
+                self.reports += 1
+                self.on_report(clock.to_ns(ts), g, a)
 
     def run(self):
         while not self.stop:
-            nodes = [n for n in hidraw_nodes(0x3318, self.pid) if n[0] == air_interface(self.pid)]
+            if self.paused:
+                time.sleep(0.5)
+                continue
+            nodes = self._nodes()
             if not nodes:
                 time.sleep(2.0)
                 continue
-            dev = nodes[0][1]
-            try:
-                fd = os.open(dev, os.O_RDWR)
-            except OSError as e:
-                self.log(f"imu: {dev} not open ({e})")
-                time.sleep(3.0)
+            fd, node = self._find(nodes)
+            if fd is None:
+                if not self.stop and not self.paused:
+                    self.log(f"imu: no interface sent samples; trying again in {self.RETRY_S:g} s")
+                self._wait_ok(self.RETRY_S)
                 continue
-            clock = AirTimestamp()
+            dev = node[1]
+            self.decision = f"interface {node[0]} ({dev})" + (", with the MCU heartbeat" if self._mcu else "")
+            self.log(f"imu: Air samples on {self.decision}")
+            self.connected_to = dev
             try:
-                self._drain(fd)
-                os.write(fd, air_stream(True))
-                self.connected_to = dev
-                self.log(f"imu: Air stream asked for on {dev}")
-                while not self.stop:
-                    r, _, _ = select.select([fd], [], [], 2.0)
-                    if not r:
-                        self.log("imu: no Air reports for 2 s; asking again")
-                        os.write(fd, air_stream(True))
-                        continue
-                    rep = air_parse(os.read(fd, 64))
-                    if rep:
-                        ts, g, a = rep
-                        self.reports += 1
-                        self.on_report(clock.to_ns(ts), g, a)
+                self._stream(fd, dev)
             except OSError as e:
                 self.log(f"imu: Air link lost ({e})")
             finally:
@@ -276,7 +479,9 @@ class AirReader(_HidReader):
                     pass
                 os.close(fd)
                 self.connected_to = None
-            time.sleep(1.0)
+                self._stop_mcu()
+            self._wait_ok(1.0)
+        self._stop_mcu()
 
 
 def beast_first(nodes):

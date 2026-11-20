@@ -1,5 +1,21 @@
 # Changes
 
+## 0.6.1 (20 Nov 2026)
+
+- **XREAL XBX A01 and A01+:** 0.6.0 got no motion from an A01+: not a single byte came back on its interface 1. Now,
+  if interface 1 stays silent for 6 s, Pocket XR wakes the glasses' controller on interface 0 the way XR Gaming's
+  driver does (a start-up handshake, then a "heartbeat" every 100 ms), asks again, and then tries interface 2. It
+  uses whichever interface sends motion and logs that choice. Not yet tried with the glasses.
+- **More in the logs:** which hidraw node is which interface of the glasses, and the first bytes of what each one
+  sends, answers included.
+- **XR Gaming check:** when XR Gaming's driver (`xrDriver`) runs, the panel and Quick Access say "XR Gaming is running;
+  turn it off for Pocket XR's head tracking (or uninstall it)", and the logs' glasses report says whether it is
+  running or installed. Two programs asking the same glasses for motion get in each other's way.
+- **Gaming Mode's Off** now stops the Air family's motion stream (and the XBX heartbeat) until a mode is picked again,
+  so the glasses are left alone.
+
+Thanks to Pierre Zammit for testing 0.6.0 with his XBX A01+ and sending logs, which led to these changes.
+
 ## 0.6.0 (20 Nov 2026)
 
 - **Your Deck on your phone.** Pocket XR on the phone can show this Deck's screens as its PC screens, up to three.
