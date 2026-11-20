@@ -189,6 +189,6 @@
   "Pocket XR's Desktop Mode needs a Plasma (X11) session. Wayland isn't supported yet. Log out and pick Plasma (X11), or use Gaming Mode.": "Le mode Bureau de Pocket XR a besoin d'une session Plasma (X11). Wayland n'est pas encore pris en charge. Déconnectez-vous et choisissez Plasma (X11), ou utilisez le mode Jeu.",
   "Screen gap": "Écart entre écrans",
   "The space between screens in Steady mode.": "L'espace entre les écrans en mode Steady.",
-  "Pocket XR's Desktop Mode needs Plasma on X11, and this SteamOS starts Desktop Mode on Wayland. To change that, run this in Konsole: {command} Then go back to Gaming Mode and switch to Desktop again. Or use Pocket XR in Gaming Mode.": "Le mode Bureau de Pocket XR a besoin de Plasma sous X11, et ce SteamOS lance le mode Bureau sous Wayland. Pour changer cela, lancez ceci dans Konsole : {command} Puis revenez au mode Jeu et repassez au Bureau. Ou utilisez Pocket XR en mode Jeu.",
-  "XR Gaming is running; turn it off for Pocket XR's head tracking (or uninstall it).": "XR Gaming est lancé ; désactivez-le (ou désinstallez-le) pour le suivi de la tête de Pocket XR."
+  "Pocket XR's Desktop Mode needs Plasma on X11, and this SteamOS starts Desktop Mode on Wayland. Use Pocket XR in Gaming Mode: it starts by itself there.": "Le mode Bureau de Pocket XR a besoin de Plasma sous X11, et ce SteamOS démarre le mode Bureau sous Wayland. Utilisez Pocket XR en mode Jeu : il s'y lance tout seul.",
+  "XR Gaming's driver is running, even with its plugin removed, and it takes the glasses and the game screen. Stop it in Konsole: {command}": "Le pilote de XR Gaming tourne encore, même après la suppression de son plugin, et prend les lunettes et l'écran du jeu. Arrêtez-le dans Konsole : {command}"
 }

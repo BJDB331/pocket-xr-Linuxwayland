@@ -189,6 +189,6 @@
   "Pocket XR's Desktop Mode needs a Plasma (X11) session. Wayland isn't supported yet. Log out and pick Plasma (X11), or use Gaming Mode.": "Pocket XR 的桌面模式需要 Plasma (X11) 工作階段，目前尚不支援 Wayland。請登出後選擇 Plasma (X11)，或使用遊戲模式。",
   "Screen gap": "螢幕間距",
   "The space between screens in Steady mode.": "Steady 模式下螢幕之間的距離。",
-  "Pocket XR's Desktop Mode needs Plasma on X11, and this SteamOS starts Desktop Mode on Wayland. To change that, run this in Konsole: {command} Then go back to Gaming Mode and switch to Desktop again. Or use Pocket XR in Gaming Mode.": "Pocket XR 的桌面模式需要 X11 上的 Plasma，而此 SteamOS 以 Wayland 啟動桌面模式。若要變更，請在 Konsole 中執行：{command} 然後回到遊戲模式並再次切換到桌面。或在遊戲模式中使用 Pocket XR。",
-  "XR Gaming is running; turn it off for Pocket XR's head tracking (or uninstall it).": "XR Gaming 正在執行；要使用 Pocket XR 的頭部追蹤，請關閉或解除安裝它。"
+  "Pocket XR's Desktop Mode needs Plasma on X11, and this SteamOS starts Desktop Mode on Wayland. Use Pocket XR in Gaming Mode: it starts by itself there.": "Pocket XR 的桌面模式需要 X11 上的 Plasma，而這個 SteamOS 以 Wayland 啟動桌面模式。請在遊戲模式中使用 Pocket XR：它會在那裡自動啟動。",
+  "XR Gaming's driver is running, even with its plugin removed, and it takes the glasses and the game screen. Stop it in Konsole: {command}": "XR Gaming 的驅動程式在外掛移除後仍在執行，並占用眼鏡和遊戲畫面。請在 Konsole 中停止它：{command}"
 }

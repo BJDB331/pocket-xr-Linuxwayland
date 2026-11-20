@@ -356,6 +356,102 @@ def test_air_2_never_opens_another_interface():
     assert r._mcu is None
 
 
+def test_xbx_heartbeat_stops_once_samples_flow_and_raw_reports_are_recorded():
+    if not hasattr(__import__("socket"), "AF_UNIX"):
+        return
+    import tempfile
+    import time
+    fake = FakeXbx(lambda num, awake: num == 1 and awake)  # once woken, it keeps streaming (as the tester's A01+)
+    rec = os.path.join(tempfile.mkdtemp(), "imu-raw.log")
+    lines = []
+    got = []
+    r = hidimu.AirReader(lambda *a: got.append(a), 0x0442, log=lines.append, nodes=fake.nodes, opener=fake.open,
+                         record_path=rec)
+    r.WAIT_S, r.HEARTBEAT_HOLD_S, r.RECORD_S = 0.4, 0.4, 0.3
+    r.start()
+    end = time.monotonic() + 10
+    while time.monotonic() < end and not any("no longer needed" in x for x in lines):
+        time.sleep(0.05)
+    n = len(got)
+    time.sleep(0.6)
+    r.stop = True
+    r.join(3)
+    text = "\n".join(lines)
+    assert "the MCU heartbeat is no longer needed, so it stopped" in text, text
+    assert len(got) > n, "samples kept coming without the heartbeat"
+    assert not r.keep_heartbeat and r._mcu is None
+    body = open(rec).read().splitlines()
+    assert body[0].startswith("# XREAL XBX A01+") and len(body) > 10, body[:3]
+    ms, first = body[1].split(" ", 1)
+    assert float(ms) >= 0 and len(bytes.fromhex(first.replace(" ", ""))) == 64
+    assert "raw recording done" in text
+
+
+def test_xbx_keeps_the_heartbeat_when_samples_need_it():
+    if not hasattr(__import__("socket"), "AF_UNIX"):
+        return
+    import time
+
+    class NeedsBeat(FakeXbx):
+        def _serve(self, num, sock):
+            if num == 0:
+                return FakeXbx._serve(self, num, sock)
+            import threading
+
+            def samples():
+                ts = 0
+                while True:
+                    ts += 1000
+                    if fake.beat_alive():
+                        try:
+                            sock.send(hidimu.air_report(ts, (0.0, 0.0, 0.0), (0.0, 0.0, 1.0)))
+                        except OSError:
+                            return
+                    time.sleep(0.004)
+            while True:
+                try:
+                    data = sock.recv(64)
+                except OSError:
+                    return
+                if not data:
+                    return
+                if data[0] == 0xAA and data[7] == 0x19 and data[8] == 1 and num == 1 and self.awake:
+                    threading.Thread(target=samples, daemon=True).start()
+
+    fake = NeedsBeat(None)
+    lines = []
+    r = hidimu.AirReader(lambda *a: None, 0x0442, log=lines.append, nodes=fake.nodes, opener=fake.open)
+    fake.beat_alive = lambda: r._mcu is not None
+    r.WAIT_S, r.HEARTBEAT_HOLD_S = 0.4, 0.3
+    r.start()
+    end = time.monotonic() + 20
+    while time.monotonic() < end and not r.keep_heartbeat:
+        time.sleep(0.1)
+    r.stop = True
+    r.join(3)
+    assert r.keep_heartbeat, "\n".join(lines)
+    assert "it stays on from now on" in "\n".join(lines)
+
+
+def test_gaming_logs_where_the_head_points():
+    import time
+    from pocketxr import gaming
+    lines = []
+
+    class G:
+        pass
+    g = G()
+    g.log = lines.append
+    g.head = fusion.HeadFusion("aura")
+    run(g.head, 1.0, (0.0, 0.0, 0.0))
+    g.head_log_until = time.monotonic() + 5
+    g.head_logged = 0.0
+    gaming.Gaming._log_head(g, time.monotonic())
+    gaming.Gaming._log_head(g, time.monotonic())  # once a second at most
+    assert len(lines) == 1 and lines[0].startswith("gaming: head yaw 0.0, pitch 0.0 degrees"), lines
+    assert "gravity 9.80 m/s2" in lines[0] and "1000 reports" in lines[0], lines
+
+
 def test_xr_gaming_is_found():
     import tempfile
     root = tempfile.mkdtemp()

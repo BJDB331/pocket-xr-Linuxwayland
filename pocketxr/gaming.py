@@ -34,6 +34,8 @@ EFFECT = "PocketXR.fx"
 EFFECT_DIR = os.path.expanduser("~/.local/share/gamescope/reshade/Shaders")
 CONFIG = os.path.expanduser("~/.config/pocket-xr-deck/gaming.json")
 LOG = os.path.expanduser("~/.local/state/pocket-xr-deck/gaming.log")
+RAW_IMU = os.path.expanduser("~/.local/state/pocket-xr-deck/imu-raw.log")  # the Air family's first seconds, in full
+HEAD_LOG_S = 60.0  # the head's direction goes in the log once a second this long after glasses, a mode or a recentre
 FOV_V_DEG = 38.0  # the glasses' picture, vertical (as the desktop app)
 ASPECT = 16 / 9
 DEFAULTS = {"mode": "space", "size": 0.8}
@@ -105,6 +107,8 @@ class Gaming:
         self.reshade = None
         self.effect_on = False
         self.lock = threading.Lock()
+        self.head_log_until = 0.0
+        self.head_logged = 0.0
         self.other_driver = []  # XR Gaming's driver, looked for every few seconds while glasses are in
         self.other_checked = 0.0
         self.buttons = DeckButtons(self._button, log=log)
@@ -202,7 +206,23 @@ class Gaming:
             elif name == "R4":
                 self.next_mode()
 
+    def _log_head(self, now):
+        """Once a second for a while: where the head points, what the motion sensor reads, so a log shows motion."""
+        if self.head is None or now > self.head_log_until or now - self.head_logged < 1.0:
+            return
+        self.head_logged = now
+        w, x, y, z = self.head.view()
+        f = fusion.qrot((w, x, y, z), (0.0, 0.0, -1.0))
+        yaw = math.degrees(math.atan2(-f[0], -f[2])) + 0.0  # no "-0.0" in the log
+        pitch = math.degrees(math.asin(max(-1.0, min(1.0, f[1])))) + 0.0
+        g = self.head.last_gyro
+        turn = math.degrees(math.sqrt(g[0] ** 2 + g[1] ** 2 + g[2] ** 2))
+        self.log(f"gaming: head yaw {yaw:.1f}, pitch {pitch:.1f} degrees; turning {turn:.1f} deg/s; "
+                 f"gravity {self.head.g_mag or 0:.2f} m/s2; still-bias {'ready' if self.head.bias_ready else 'not yet'}; "
+                 f"{self.head.count} reports")
+
     def recentre(self):
+        self.head_log_until = time.monotonic() + HEAD_LOG_S
         if self.head:
             self.head.recentre()
         if self.control and self.mode() == "steady":
@@ -233,6 +253,7 @@ class Gaming:
 
     def _apply_mode(self):
         m = self.mode()
+        self.head_log_until = time.monotonic() + HEAD_LOG_S
         if isinstance(self.reader, hidimu.AirReader):
             # Off leaves the Air family's glasses alone: no motion stream, and on the XBX no MCU heartbeat.
             paused = self.settings.get("mode", "space") == "off"
@@ -304,7 +325,7 @@ class Gaming:
         if g.imu == "network":
             self.reader = imu.ImuReader(self.head.report, log=self.log)
         elif g.imu == "air":
-            self.reader = hidimu.AirReader(self.head.report, g.product, log=self.log)
+            self.reader = hidimu.AirReader(self.head.report, g.product, log=self.log, record_path=RAW_IMU)
         elif g.imu == "viture" and g.viture_tracking_default():
             self.reader = hidimu.VitureReader(self.head.report, g.product, log=self.log)
         if self.reader:
@@ -385,6 +406,7 @@ class Gaming:
                             self._connect_gamescope()
                         self._check_glasses()
                         self._check_other_driver(now)
+                        self._log_head(now)
                         if self.glasses and self.reshade and not self.effect_on and self.mode() == "space":
                             self._effect(True)
                     else:

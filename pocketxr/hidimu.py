@@ -31,6 +31,9 @@ AIR_ULTRA = 0x0426
 # 0, commands 0x26, 0x57, 0x12 (1), 0x02 (1), 0x34, 0x35, then 0x31 with the SDK version "3.1.1", then 0x1A with the
 # time every 100 ms; its comment says this gates the IMU stream (sequence found by taowen's ar-glass-lib). So the
 # reader tries interface 1 alone first, then with the heartbeat, then interface 2, and logs what each gives.
+# Seen with 0.6.1 on that A01+: after the heartbeat, interface 1 sent its 0xAA 0x53 start packet and then samples, and it
+# kept streaming with the heartbeat stopped. The tester's buttons were off afterwards. No command to hand the buttons
+# back is known (none is guessed), so the heartbeat now runs only until samples flow, then stops.
 AIR_XBX = frozenset({0x0440, 0x0442})
 XBX_MCU = 0
 MCU_HEAD = 0xFD
@@ -272,10 +275,15 @@ class AirReader(_HidReader):
     WAIT_S = 6.0         # how long an interface may stay silent before the next one is tried
     RETRY_S = 10.0       # after every interface was silent
     LOGGED_PER_NODE = 12  # raw reports logged per node per try
+    HEARTBEAT_HOLD_S = 3.0  # the XBX heartbeat keeps running this long once samples flow, then stops
+    RECORD_S = 5.0          # every report in full, this long after the samples start (record_path)
 
-    def __init__(self, on_report, pid, log=print, nodes=None, opener=None):
+    def __init__(self, on_report, pid, log=print, nodes=None, opener=None, record_path=None):
         super().__init__(on_report, log)
         self.pid = pid
+        self.record_path = record_path  # a file for RECORD_S of raw reports, made once per reader
+        self.recorded = False
+        self.keep_heartbeat = False  # set once samples stopped right after the heartbeat stopped
         self.paused = False  # Gaming Mode's "off": no stream and no heartbeat, so the glasses are left alone
         self._nodes = nodes or (lambda: hidraw_map(0x3318, self.pid))
         self._open = opener or (lambda path: os.open(path, os.O_RDWR))
@@ -429,20 +437,58 @@ class AirReader(_HidReader):
         self._stop_mcu()
         return None, None
 
+    def _start_recording(self):
+        if not self.record_path or self.recorded:
+            return None
+        self.recorded = True
+        try:
+            os.makedirs(os.path.dirname(self.record_path), exist_ok=True)
+            f = open(self.record_path, "w")
+        except OSError as e:
+            self.log(f"imu: no raw recording ({e})")
+            return None
+        f.write(f"# {AIR_MODELS.get(self.pid, hex(self.pid))}: every report for {self.RECORD_S:g} s, "
+                "ms since the first, then the 64 bytes in hex\n")
+        self.log(f"imu: recording {self.RECORD_S:g} s of raw reports in {os.path.basename(self.record_path)}")
+        return f
+
     def _stream(self, fd, dev, first_report=None):
         clock = AirTimestamp()
         quiet = 0
+        started = time.monotonic()
+        heartbeat_until = started + self.HEARTBEAT_HOLD_S if self._mcu and not self.keep_heartbeat else None
+        stopped_heartbeat = None
+        rec = self._start_recording()
+        rec_end = started + self.RECORD_S
         while not self.stop and not self.paused:
+            now = time.monotonic()
+            if heartbeat_until and now >= heartbeat_until:
+                heartbeat_until = None
+                stopped_heartbeat = now
+                self._stop_mcu()
+                self.log("imu: samples flowing; the MCU heartbeat is no longer needed, so it stopped")
+            if rec and now >= rec_end:
+                rec.close()
+                rec = None
+                self.log("imu: raw recording done")
             r, _, _ = select.select([fd], [], [], 2.0)
             if not r:
                 quiet += 1
                 if quiet >= 3:
                     self.log("imu: samples stopped for 6 s; looking again")
+                    if stopped_heartbeat and time.monotonic() - stopped_heartbeat < 15.0:
+                        self.keep_heartbeat = True
+                        self.log("imu: the samples stopped soon after the heartbeat did; it stays on from now on")
+                    if rec:
+                        rec.close()
                     return
                 self.log("imu: no Air reports for 2 s; asking again")
                 os.write(fd, air_stream(True))
                 continue
-            rep = air_parse(self._read(fd, dev))
+            data = self._read(fd, dev)
+            if rec:
+                rec.write(f"{(time.monotonic() - started) * 1000:.1f} {bytes(data).hex(' ')}\n")
+            rep = air_parse(data)
             if rep:
                 quiet = 0
                 ts, g, a = rep

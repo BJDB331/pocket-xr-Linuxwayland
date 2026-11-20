@@ -1,5 +1,25 @@
 # Changes
 
+## 0.6.2 (20 Nov 2026)
+
+- **XREAL XBX A01 and A01+:** with 0.6.1 an A01+ sent motion after the controller's heartbeat (522 reports a second),
+  but the screen still followed the head, and the glasses' buttons were off afterwards. XR Gaming's driver was still
+  running on that Deck after its plugin was removed; it reads the same glasses and sets the game screen's effect
+  itself. Now:
+  - The heartbeat runs only until motion flows (3 s), then stops, because the glasses kept sending without it. If
+    the motion then stops, it stays on.
+  - The logs carry the first 5 s of motion reports in full (`imu-raw.log`) and, for a minute after the glasses
+    appear, a mode is picked or the view is recentred, where the head points once a second.
+  - Not yet tried with the glasses. Whether unplugging and replugging gives the buttons back is not yet known.
+- **XR Gaming's driver:** the message now says it can still run with its plugin removed, and gives the command that
+  stops it: `systemctl --user disable --now xr-driver`.
+- **Desktop Mode on Wayland:** the message and the README no longer suggest switching SteamOS's desktop to X11. A
+  tester's Deck had trouble after that switch. They point to Gaming Mode, and the README gives the command that puts
+  Wayland back: `steamosctl set-default-desktop-session plasma.desktop`.
+- **Quick Access panel:** its version now follows Pocket XR's, so the installer offers the new panel when it changes.
+
+Thanks to Pierre Zammit for testing 0.6.1 and sending logs, which led to these changes.
+
 ## 0.6.1 (20 Nov 2026)
 
 - **XREAL XBX A01 and A01+:** 0.6.0 got no motion from an A01+: not a single byte came back on its interface 1. Now,

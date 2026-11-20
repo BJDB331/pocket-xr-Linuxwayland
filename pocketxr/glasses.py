@@ -168,8 +168,11 @@ def other_glasses():
 # XR Gaming (wheaney's XRLinuxDriver, a Decky plugin): its driver, xrDriver, runs as a service and talks to the same
 # glasses. Two programs asking one pair of glasses for their motion get in each other's way.
 XR_GAMING_PROGRAMS = ("xrDriver",)
-XR_GAMING_SERVICES = ("~/.config/systemd/user/xr-driver.service", "/etc/systemd/system/xr-driver.service",
-                      "/usr/lib/systemd/system/xr-driver.service")
+# Its installer puts the service in ~/.local/share/systemd/user, and removing the Decky plugin leaves it running (seen
+# on a tester's Deck, November 2026). It also sets gamescope's ReShade effect itself (Sombrero.frag), the same channel
+# Pocket XR's Gaming Mode uses.
+XR_GAMING_SERVICES = ("~/.local/share/systemd/user/xr-driver.service", "~/.config/systemd/user/xr-driver.service",
+                      "/etc/systemd/system/xr-driver.service", "/usr/lib/systemd/system/xr-driver.service")
 
 
 def xr_gaming_running(proc="/proc"):
@@ -191,5 +194,9 @@ def xr_gaming_installed():
     return [p for p in (os.path.expanduser(x) for x in XR_GAMING_SERVICES) if os.path.exists(p)]
 
 
+XR_GAMING_STOP = "systemctl --user disable --now xr-driver"
+
+
 def xr_gaming_text():
-    return tr("XR Gaming is running; turn it off for Pocket XR's head tracking (or uninstall it).")
+    return tr("XR Gaming's driver is running, even with its plugin removed, and it takes the glasses and the game "
+              "screen. Stop it in Konsole: {command}", command=XR_GAMING_STOP)
