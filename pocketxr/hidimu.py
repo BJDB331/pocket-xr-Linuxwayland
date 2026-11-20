@@ -4,7 +4,8 @@ VitureImuProtocol (each written there from public, MIT licensed protocol write-u
 SteamOS gives the signed-in user every hidraw device (70-steam-jupiter-input.rules), so no setup is needed.
 Writes to hidraw go out as they are when the first byte is not 0, which holds for both protocols' frames.
 
-Air family: 64 byte reports on HID interface 3 (2 on the Air 2 Ultra); command 0x19 with 1 starts the stream.
+Air family: 64 byte reports on HID interface 3 (2 on the Air 2 Ultra, 1 on the XBX A01 and A01+, whose MCU is on 0);
+command 0x19 with 1 starts the stream.
 VITURE: frames with preamble 0x0010; 0x0301 (raw stream, rate index 2 = 120 Hz) starts it, 0x7309 carries a sample.
 Pocket XR found the Beast takes no new command while an answer of its own is unread, so what is waiting is read first.
 """
@@ -21,12 +22,21 @@ G = 9.81
 DEG = math.pi / 180
 
 # ---------------- XREAL Air family ----------------
-AIR_MODELS = {0x0424: "XREAL Air", 0x0428: "XREAL Air 2", 0x0432: "XREAL Air 2 Pro", 0x0426: "XREAL Air 2 Ultra"}
+AIR_MODELS = {0x0424: "XREAL Air", 0x0428: "XREAL Air 2", 0x0432: "XREAL Air 2 Pro", 0x0426: "XREAL Air 2 Ultra",
+              0x0440: "XREAL XBX A01", 0x0442: "XREAL XBX A01+"}
 AIR_ULTRA = 0x0426
+# XBX A01 and A01+: the IMU on interface 1, the MCU on 0 (wheaney's nrealAirLinuxDriver, hid_ids.c, MIT). Not yet
+# tried with Pocket XR: a tester's A01+ (November 2026) showed three HID interfaces, 0 to 2, each with 64 byte reports.
+AIR_XBX = frozenset({0x0440, 0x0442})
 
 
 def air_interface(pid):
-    return 2 if pid == AIR_ULTRA else 3
+    """The HID interface that carries the IMU."""
+    if pid == AIR_ULTRA:
+        return 2
+    if pid in AIR_XBX:
+        return 1
+    return 3
 
 
 def air_command(cmd_id, data=b""):

@@ -188,5 +188,6 @@
   "{first} and {last}": "{first} y {last}",
   "Pocket XR's Desktop Mode needs a Plasma (X11) session. Wayland isn't supported yet. Log out and pick Plasma (X11), or use Gaming Mode.": "El modo escritorio de Pocket XR necesita una sesión Plasma (X11). Wayland aún no es compatible. Cierra sesión y elige Plasma (X11), o usa el modo de juego.",
   "Screen gap": "Separación entre pantallas",
-  "The space between screens in Steady mode.": "El espacio entre las pantallas en el modo Steady."
+  "The space between screens in Steady mode.": "El espacio entre las pantallas en el modo Steady.",
+  "Pocket XR's Desktop Mode needs Plasma on X11, and this SteamOS starts Desktop Mode on Wayland. To change that, run this in Konsole: {command} Then go back to Gaming Mode and switch to Desktop again. Or use Pocket XR in Gaming Mode.": "El modo escritorio de Pocket XR necesita Plasma en X11, y este SteamOS inicia el modo escritorio en Wayland. Para cambiarlo, ejecuta esto en Konsole: {command} Luego vuelve al modo de juego y cambia de nuevo al escritorio. O usa Pocket XR en el modo de juego."
 }

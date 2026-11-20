@@ -30,8 +30,12 @@ curl -L https://github.com/pocket-xr/pocket-xr-deck/releases/latest/download/poc
 Pocket XR then appears on the desktop and in the app menu, and starts by itself in Gaming Mode. No password is
 needed. It installs into your home folder, so SteamOS updates leave it alone. Run the same line again to update.
 
-Not on SteamOS? Desktop Mode needs KDE Plasma on X11, as SteamOS has. On a Wayland desktop (the default on CachyOS,
-Bazzite and others) log out and pick **Plasma (X11)**, or use Gaming Mode. If a back button also opens your
+Pocket XR's own Desktop Mode view needs KDE Plasma on X11. The SteamOS 3.9.5 Decks we have seen start Desktop Mode
+on Wayland. To change that, run `steamosctl set-default-desktop-session plasmax11.desktop` in Konsole, then go back
+to Gaming Mode and switch to Desktop again (not yet tried; `plasma.desktop` puts Wayland back). Your Deck on your
+phone (below) needs Wayland, so it stops working on X11. Gaming Mode works either way.
+
+Not on SteamOS? On a Wayland desktop (the default on CachyOS, Bazzite and others) log out and pick **Plasma (X11)**, or use Gaming Mode. If a back button also opens your
 desktop's own menu, your system has mapped that button too: clear it in Steam's desktop controller layout or your
 handheld tool (like HHD or InputPlumber).
 
@@ -137,6 +141,21 @@ Hold them like remotes, pointing forward. Each one points ahead by itself when i
 sideways a little; press Capture or Home to point it ahead again. Steam turns the Joy-Cons' motion sensors off;
 Pocket XR turns them on while PC VR runs, and off again after.
 
+## Your Deck on your phone
+
+New: Pocket XR on your phone can show this Deck's screens as its PC screens, up to three, each at the shape of its
+window. Tried with one phone so far; that first try showed a broken picture (SteamOS's HEVC encoder), so the Deck now
+checks each encoder and sends H.264. In Desktop Mode the Deck answers the phone by itself, with nothing else to
+install. Put both on the same network. The first time, the Deck asks whether to allow the phone. It replaces the
+Pocket XR PC Screens app; the installer switches that app off. How it works and what has been checked:
+`docs/HOST-DECK.md`.
+
+## Your PC in the glasses
+
+New, and not yet tried on a Deck: **Show a PC** (on the launcher card and the control panel) opens a screen of your
+Windows PC as a window in the Space, up to three, through Moonlight and the PC's Apollo set up by the Pocket XR PC
+helper. How it works: `docs/PC-SCREENS-DECK.md`.
+
 ## More
 
 Holding the pointer against the right edge of the Deck's screen for a second also recentres.
@@ -166,6 +185,7 @@ The same glasses as Pocket XR on Android:
 | XREAL Aura | Yes | Yes. Pocket XR turns the Aura's Spatial Anchor on and off for you. | Yes |
 | XREAL One, One Pro, One Pro+, 1S | Yes | With the XREAL Eye. You turn 6DoF on in the glasses' menu when asked. | Not yet: please try it |
 | XREAL Air, Air 2, Air 2 Pro, Air 2 Ultra | Yes | No | Not yet: please try it |
+| XREAL XBX A01, A01+ | Yes, untested: the Air's tracking on the glasses' HID interface 1 | No | Not yet: please try it |
 | VITURE Beast | Yes | No (waits on VITURE's SDK) | Not yet: please try it |
 | Other VITURE glasses | Experimental, off until you turn it on in the panel | No | Not yet: please try it |
 | Other glasses | No, the windows are shown flat | No | Not yet: please try it |
@@ -212,8 +232,12 @@ glasses report helps just as much.
 
 ```bash
 python3 tests/test_offline.py   # checks that need no glasses or screen
+python3 tests/test_host.py      # the Deck host's parts that need no Deck
+native/host/build.sh            # the host's programs (in WSL Ubuntu or Linux)
 ./make-release.sh               # dist/pocket-xr-deck.tar.gz
 ```
+
+On a Deck, `tools/host_check.py` checks a running host from the phone's side.
 
 `docs/FEASIBILITY.md` covers why the Deck version is built this way, how it compares to Breezy Desktop, and the test
 results on a real Deck.
@@ -229,3 +253,10 @@ unmodified, as Pocket XR on Android bundles them.
 
 PC VR uses ALVR's client library (https://github.com/alvr-org/ALVR, MIT licence), built from the same source as
 Pocket XR on Android, and the Deck's own FFmpeg to decode the video.
+
+The Deck host (`pocketxr/host`, `native/host`) ports its protocol from Sunshine (https://github.com/LizardByte/Sunshine)
+and Apollo (https://github.com/ClassicOldSong/Apollo), both GPLv3, and is compatible with Moonlight. It builds in
+moonlight-common-c's ENet fork (https://github.com/moonlight-stream/moonlight-common-c; ENet by Lee Salzman, MIT
+licence) and nanors (https://github.com/sleepybishop/nanors; Joseph Calderon, MIT licence), whose licence texts are
+in `native/host/third_party/`, and KDE's screencast protocol description (LGPL-2.1-or-later). It uses the Deck's own
+FFmpeg, PipeWire, OpenSSL and Opus.

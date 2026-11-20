@@ -19,8 +19,10 @@ VITURE_BEAST = 0x1211
 VITURE_BEAST_1201 = 0x1201
 BEAST_PRODUCTS = frozenset({VITURE_BEAST, VITURE_BEAST_1201})
 VITURE_MICROPHONE = 0x1102
-# The Air models Pocket XR reads (AirImuProtocol): Air, Air 2, Air 2 Pro, Air 2 Ultra.
-AIR_IMU = {0x0424: "XREAL Air", 0x0428: "XREAL Air 2", 0x0432: "XREAL Air 2 Pro", 0x0426: "XREAL Air 2 Ultra"}
+# The Air models Pocket XR reads (AirImuProtocol): Air, Air 2, Air 2 Pro, Air 2 Ultra, and the XBX A01 and A01+
+# (not yet tried with Pocket XR: the same protocol on HID interface 1, after wheaney's nrealAirLinuxDriver, MIT).
+AIR_IMU = {0x0424: "XREAL Air", 0x0428: "XREAL Air 2", 0x0432: "XREAL Air 2 Pro", 0x0426: "XREAL Air 2 Ultra",
+           0x0440: "XREAL XBX A01", 0x0442: "XREAL XBX A01+"}
 AIR_FAMILY = {0x0423, 0x0424, 0x0425, 0x0426, 0x0427, 0x0428, 0x0431, 0x0432, 0x043F, 0x0440, 0x0441, 0x0442}
 
 

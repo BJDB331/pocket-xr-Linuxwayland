@@ -11,15 +11,14 @@ once the picture is steady, comes back as "Waiting for your PC" if the picture p
 seconds closes the portal back to the Space.
 """
 import ctypes
-import json
 import math
 import os
-import socket
 import threading
 import time
 
 from . import fusion
 from . import joycon
+from . import pchelper
 from . import pcvr_pads as pads
 from . import pcvr_scene as scene
 from .i18n import tr
@@ -27,7 +26,6 @@ from .gl import GL_LINEAR, GL_QUADS, GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_TE
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 NATIVE = os.path.join(HERE, "..", "native")
-PORT = 47610
 VIEW_W, VIEW_H, RATE = 1920, 1080, 60.0
 IPD = 0.063
 HEAD_HEIGHT = 1.6
@@ -154,33 +152,18 @@ class PcVr:
         self.hands = pads.DeckHands()
         self.joycons = joycon.JoyCons(self.log)
         self.pad_report_seen = False
-        self.token_path = os.path.join(os.path.expanduser("~/.config/pocket-xr-deck"), "pc-helper.json")
+        self.token_path = pchelper.TOKEN_PATH
         h, v = math.atan(math.tan(math.radians(19)) * 16 / 9), math.radians(19)
         self.fovs = (ctypes.c_float * 8)(-h, h, v, -v, -h, h, v, -v)
         threading.Thread(target=self._connect, daemon=True).start()
 
-    # ---- the PC helper (UDP find, pair once, start) ----
+    # ---- the PC helper (pchelper.py: UDP find, pair once, start) ----
     def _find(self, timeout=6.0):
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        s.settimeout(0.5)
-        end = time.time() + timeout
-        while time.time() < end and not self.stop:
-            s.sendto(b"POCKETXR-FIND 1", ("255.255.255.255", PORT))
-            try:
-                data, addr = s.recvfrom(256)
-            except socket.timeout:
-                continue
-            parts = data.decode(errors="replace").split()
-            if parts[:2] == ["POCKETXR-HERE", "1"]:
-                return addr[0], int(parts[2]), " ".join(parts[3:])
-        return None
+        return pchelper.find(timeout, stop=lambda: self.stop)
 
     @staticmethod
     def _ask(host, port, req, timeout=60.0):
-        with socket.create_connection((host, port), timeout=timeout) as c:
-            c.sendall((json.dumps(req) + "\n").encode())
-            return json.loads(c.makefile().readline())
+        return pchelper.ask(host, port, req, timeout)
 
     def _connect(self):
         if self.lib is None:
@@ -193,22 +176,15 @@ class PcVr:
             return
         host, port, pc = found
         self.log(f"pcvr: PC helper on {pc} ({host})")
-        try:
-            token = json.load(open(self.token_path)).get("token")
-        except (OSError, ValueError):
-            token = None
+        token = pchelper.load_token(self.token_path)
         try:
             if not token:
                 self.state, self.message = "pairing", tr("Allow this Steam Deck on {pc}: a question is on its screen.",
                                                          pc=pc)
-                r = self._ask(host, port, {"op": "pair", "phone": "Steam Deck"}, timeout=120)
-                if not r.get("ok"):
+                token = pchelper.pair(host, port)
+                if not token:
                     self.state, self.message = "failed", tr("{pc} did not allow this Deck.", pc=pc)
                     return
-                token = r["token"]
-                os.makedirs(os.path.dirname(self.token_path), exist_ok=True)
-                with open(self.token_path, "w") as f:
-                    json.dump({"token": token, "pc": r.get("pc")}, f)
             self.lib.pxr_init(VIEW_W, VIEW_H, RATE)
             self.started = True
             name = ctypes.create_string_buffer(128)

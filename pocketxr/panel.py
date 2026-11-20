@@ -240,18 +240,24 @@ class Panel:
         row.pack(fill="x", padx=4, pady=(4, 2))
         self.space_buttons = {}
         for i, (label, cmd) in enumerate(((tr("Launcher"), "launcher"), (tr("Control Center"), "cc"), ("PC VR", "pcvr"),
-                                          (tr("Record"), "record"))):
+                                          ("Show a PC", "pc_screen"))):
             # four in a row in the Window in front row's smaller type, so "Control Center" fits and the panel keeps its
             # height (two rows hid the back buttons' guide behind Quit)
             b = Button(row, label, lambda c=cmd: send(c), height=38, font=(FONT, 10), radius=10)
             b.grid(row=0, column=i, sticky="ew", padx=3)
             row.columnconfigure(i, weight=1)
             self.space_buttons[cmd] = b
-        # Share layouts and Import layouts: the saved layouts as a file in Downloads, for Pocket XR on a phone or
-        # another Deck (the layouts themselves are in the Control Center)
+        # Show a PC is for the glasses on this Deck; a phone's glasses reach this Deck from the phone (pocketxr/host)
+        tk.Label(sp.body, text="Show a PC: another computer in the glasses plugged into this Deck. "
+                               "Glasses on a phone open PC screens from the phone.",
+                 bg=C["card"], fg=C["ink3"], font=(FONT, 7), anchor="w", justify="left", wraplength=W - 50
+                 ).pack(fill="x", padx=7, pady=(0, 3))
+        # Record, Share layouts and Import layouts. The layouts go as a file in Downloads, for Pocket XR on a phone or
+        # another Deck (the layouts themselves are in the Control Center).
         lr = tk.Frame(sp.body, bg=C["card"])
         lr.pack(fill="x", padx=4, pady=(0, 2))
-        pair = ((tr("Share layouts"), "share_layouts"), (tr("Import layouts"), "import_layouts"))
+        # Record shares this row since Show a PC joined the one above (five in a row did not fit)
+        pair = ((tr("Record"), "record"), (tr("Share layouts"), "share_layouts"), (tr("Import layouts"), "import_layouts"))
         for i, (label, cmd) in enumerate(pair):
             b = Button(lr, label, lambda c=cmd: send(c), height=30, font=(FONT, 9), radius=10)
             b.grid(row=0, column=i, sticky="ew", padx=3)

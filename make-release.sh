@@ -13,6 +13,14 @@ if [ -f native/out/libpxr_pcvr.so ]; then
 else
   echo "note: no PC VR libraries in native/out (run native/build.sh); the release has no PC VR" >&2
 fi
+# The host's native pieces (native/host/build.sh): PC screens with this Deck as the computer
+if [ -f native/out/pxr-host-video ] && [ -f native/out/libpxr_host.so ]; then
+  mkdir -p dist/pocket-xr-deck/native
+  cp native/out/pxr-host-video native/out/libpxr_host.so dist/pocket-xr-deck/native/
+  chmod +x dist/pocket-xr-deck/native/pxr-host-video
+else
+  echo "note: no host programs in native/out (run native/host/build.sh); the release has no Deck host" >&2
+fi
 # Gaming Mode's Quick Access panel for Decky (decky/, built with npm run build there)
 if [ -f decky/dist/index.js ]; then
   mkdir -p dist/pocket-xr-deck/decky/dist

@@ -438,6 +438,11 @@ def launcher_card(apps, page, icon_for, cols=5, rows=3):
     cv.glass(px, py, pw, ph, ph / 2, fill=L.ACCENT_DEEP, rim=L.ACCENT)
     cv.text(px + pw / 2, py + ph / 2, "PC VR", 22, (1, 1, 1, 1), medium=True, align="center")
     items.append((px, py, pw, ph, "pcvr", None, ph / 2))
+    # Show a PC, beside it: each press opens the next screen of another computer in these glasses (pcscreens.py)
+    qx = px + pw + 16
+    cv.glass(qx, py, pw, ph, ph / 2, fill=L.GLASS_RAISED, rim=L.ACCENT)
+    cv.text(qx + pw / 2, py + ph / 2, "Show a PC", 22, L.INK, medium=True, align="center")
+    items.append((qx, py, pw, ph, "pc_screen", None, ph / 2))
     per = cols * rows
     pages = max(1, math.ceil(len(apps) / per))
     shown = apps[page * per:(page + 1) * per]
