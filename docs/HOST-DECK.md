@@ -17,7 +17,7 @@ Pocket XR for Windows' own host (`src/PocketXR/PcHost`) is.
 | Pairing, serverinfo, app list, launch, cancel | `server.py` | HTTP on P, HTTPS on P-5. TLS through OpenSSL with ctypes (`ossl.py`): any client certificate is let through, then checked against the paired phones |
 | RTSP | `server.py` | TCP on P+21: OPTIONS, DESCRIBE, SETUP, ANNOUNCE, PLAY |
 | Control stream | `control.py` | moonlight-common-c's ENet fork (`native/host/pxr_host.c`) on P+10, AES-GCM (CONTROL_V2) |
-| Picture | `native/host/pxr_host_video.c` | A KWin virtual output per stream (`zkde_screencast_unstable_v1`, `stream_virtual_output`, pointer drawn in), captured through PipeWire. Encoded by FFmpeg as `hwupload` + `scale_vaapi` (NV12, BT.709) + `h264_vaapi` or `hevc_vaapi`: peak-limited VBR (mean 3/4 of the phone's bitrate), no B-frames, a key frame only when asked. Sent as Moonlight's video packets with Reed-Solomon FEC (nanors, 20 %) to P+9 |
+| Picture | `native/host/pxr_host_video.c` | A KWin virtual output per stream (`zkde_screencast_unstable_v1`, `stream_virtual_output`, pointer drawn in), captured through PipeWire. Encoded by FFmpeg as `hwupload` + `scale_vaapi` (NV12, BT.709) + `h264_vaapi` or `hevc_vaapi` (each checked first: see below): peak-limited VBR (mean 3/4 of the phone's bitrate), no B-frames, a key frame only when asked. Sent as Moonlight's video packets with Reed-Solomon FEC (nanors, 20 %) to P+9 |
 | Sound | `audio.py` | A null sink per stream, made the default while it streams, recorded with `parec`. Opus at 192 kbps in 5 ms packets, AES-CBC, RS(4,2) parity, to P+11 |
 | Mouse, keys, text | `inputs.py` | uinput: a keyboard, a mouse (relative moves, wheel) and an absolute pointer over the whole desktop |
 | Clipboard | `desktop.py` | Klipper over D-Bus (`qdbus6`), for `/actions/clipboard` |
@@ -92,17 +92,19 @@ development files. It uses FFmpeg 8.1's headers and the Deck's own `libavcodec.s
 These were checked with `tools/host_check.py`, a test client that talks to the host as the phone's Moonlight core
 does. It ran on the Deck against the host on test ports, not with a phone.
 
-- Encoders found: H.264 and HEVC. There is no AV1 (the chip has no AV1 encoder).
+- Encoders that open: H.264 and HEVC. There is no AV1 (the chip has no AV1 encoder). HEVC's streams do not decode
+  (see below), so only H.264 is offered.
 - Pairing completed in about 1.1 s once the PIN was given.
 - serverinfo over HTTPS answered with and without a client certificate. An unknown certificate gets `PairStatus` 0.
 - launch, the RTSP steps and PLAY all worked. The control stream connected over ENet.
 - The first 1280x720 picture left about 0.3 to 0.75 s after PLAY.
 - Every frame arrived whole, with none bad. Key frames carried their parameter sets: H.264 NAL types 7, 8 and 5, and
-  HEVC 32, 33, 34 and 19. A key frame asked for over the control stream came.
+  HEVC 32, 33, 34 and 19. A key frame asked for over the control stream came. (These checks did not decode the
+  frames; the HEVC ones turned out not to decode.)
 - Sound: every packet decrypted and Opus-decoded (1,350 in 8 s).
 - A pointer move to the middle of a 1600x900 PC screen put KWin's pointer at its middle (1750,450, with the output at
   949,0).
-- Two PC screens at once (1920x1080 H.264 and 1280x800 HEVC) each passed all 16 checks. Their outputs sat side by
+- Two PC screens at once (1920x1080 H.264 and 1280x800 HEVC) each passed all 16 checks (before the decode check). Their outputs sat side by
   side at 949,0 and 2869,0, and both were gone after cancel.
 - Encoding: about 4 ms a frame at 1280x720 and about 6 ms at 1920x1080 (H.264).
 - A still screen sends its last picture again about 10 times a second.
@@ -119,6 +121,24 @@ Problems found and fixed along the way:
   device's last one. The first centring was lost, and the phone's move to the same middle then did nothing. The
   devices are now made when the host starts, and a repeated position is nudged by one unit first.
 - kscreen-doctor gives the panel's size already turned. Turning it again put a virtual output over the panel.
+- KDE's display-switch pop-up ("Only use external screen" and the other layouts) opened on the Deck's screen when the
+  first phone stream started, and stayed there. KWin 6.7 opens it itself when it meets a set of exactly two outputs,
+  one built in, that it has no stored setup for: the Deck's screen with a PC screen it has not seen before. The host
+  now closes it (kscreen's `hideOsd`, over `busctl`) if it opens in the 6 seconds after a PC screen's output
+  appears; other uses of the pop-up are left alone. Seen on the Deck with two new test screens: the pop-up's service
+  started and was closed in the same second, and every check still passed. It may show for a moment before closing.
+
+- **HEVC came out as coloured blocks in the glasses** (first phone test, 20 Nov 2026: 1784x976 HEVC; magenta and
+  green blocks along the top, pale blocky noise below). SteamOS's Mesa 26.1.2 `hevc_vaapi` writes HEVC that does not
+  decode: FFmpeg 8.1.2's decoder, on the Deck and on Windows, reported bad slice headers
+  (`alignment_bit_equal_to_one=0`) and missing references, for every size tried (640x368 to 1920x1080), with
+  FFmpeg's own command line as well as the host, and with every rate control tried. H.264 from the same pipeline
+  decoded with no errors, and a decoded frame showed the desktop as it was. Now `pxr-host-video --probe` encodes
+  six moving test pictures with each encoder and decodes them in software (0.2 s in all); an encoder whose pictures
+  do not decode is left out, and the host log says `encoder broken hevc`. So the Deck offers H.264 only, and HEVC
+  comes back by itself if a later Mesa fixes it. `tools/host_check.py` now decodes the frames it receives with
+  FFmpeg too. With the phone's settings (1784x976, 120 fps asked, 64 Mbps, packets of 1024) the H.264 stream passed
+  all 17 checks, decoding included.
 
 ## To check with the phone
 

@@ -500,6 +500,87 @@ static AVCodecContext *encoder_open(const char *codec, AVBufferRef *frames, int 
     return e;
 }
 
+// ---- the encoder's own check ----
+// An encoder can open and still write streams that do not decode: SteamOS's Mesa 26.1.2 hevc_vaapi on the Deck
+// (20 Nov 2026) gave HEVC that FFmpeg's decoder and the phone's both refused (bad slice headers, missing references),
+// and the phone showed coloured blocks. So each encoder writes a few moving test pictures, FFmpeg decodes them in
+// software, and an encoder whose stream gives a decoding error, or no picture, is left out.
+
+static atomic_int decode_errors;
+
+static void count_errors(void *avcl, int level, const char *fmt, va_list vl) {
+    (void)avcl;
+    (void)fmt;
+    (void)vl;
+    if (level <= AV_LOG_ERROR) decode_errors++;
+}
+
+static int decodes(AVCodecContext *e, AVBufferRef *frames, int w, int h) {
+    enum { N = 6 };
+    AVPacket *pkts[N * 2];
+    int npkts = 0, ok = 0;
+    AVFrame *sw = av_frame_alloc(), *hw = av_frame_alloc();
+    sw->format = AV_PIX_FMT_NV12;
+    sw->width = w;
+    sw->height = h;
+    if (av_frame_get_buffer(sw, 0) < 0) goto done;
+    for (int n = 0; n <= N; n++) {
+        if (n < N) {
+            // A gradient with a box moving across it: the P-frames have something to say.
+            for (int y = 0; y < h; y++)
+                for (int x = 0; x < w; x++) {
+                    int box = x >= n * 40 && x < n * 40 + 96 && y >= 64 && y < 160;
+                    sw->data[0][y * sw->linesize[0] + x] = box ? 235 : (uint8_t)(16 + (x + y) % 200);
+                }
+            for (int y = 0; y < h / 2; y++)
+                for (int x = 0; x < w / 2; x++) {
+                    sw->data[1][y * sw->linesize[1] + 2 * x] = (uint8_t)(64 + x % 128);
+                    sw->data[1][y * sw->linesize[1] + 2 * x + 1] = (uint8_t)(64 + y % 128);
+                }
+            av_frame_unref(hw);
+            if (av_hwframe_get_buffer(frames, hw, 0) < 0 || av_hwframe_transfer_data(hw, sw, 0) < 0) goto done;
+            hw->pts = n;
+            hw->pict_type = n == 0 ? AV_PICTURE_TYPE_I : AV_PICTURE_TYPE_NONE;
+            if (avcodec_send_frame(e, hw) < 0) goto done;
+        } else if (avcodec_send_frame(e, NULL) < 0) {
+            goto done;
+        }
+        AVPacket *p = av_packet_alloc();
+        while (avcodec_receive_packet(e, p) == 0 && npkts < N * 2) {
+            pkts[npkts++] = p;
+            p = av_packet_alloc();
+        }
+        av_packet_free(&p);
+    }
+    const AVCodec *dc = avcodec_find_decoder(e->codec_id);
+    AVCodecContext *d = dc ? avcodec_alloc_context3(dc) : NULL;
+    if (!d || avcodec_open2(d, dc, NULL) < 0) {
+        avcodec_free_context(&d);
+        ok = 1;  // nothing here to check it with: as before, trust the encoder
+        goto done;
+    }
+    int pictures = 0;
+    decode_errors = 0;
+    av_log_set_callback(count_errors);
+    AVFrame *out = av_frame_alloc();
+    for (int i = 0; i <= npkts; i++) {
+        if (avcodec_send_packet(d, i < npkts ? pkts[i] : NULL) < 0) decode_errors++;
+        while (avcodec_receive_frame(d, out) == 0) {
+            if (out->decode_error_flags) decode_errors++;
+            pictures++;
+        }
+    }
+    av_log_set_callback(av_log_default_callback);
+    av_frame_free(&out);
+    avcodec_free_context(&d);
+    ok = decode_errors == 0 && pictures > 0;
+done:
+    for (int i = 0; i < npkts; i++) av_packet_free(&pkts[i]);
+    av_frame_free(&sw);
+    av_frame_free(&hw);
+    return ok;
+}
+
 static int probe(void) {
     if (av_hwdevice_ctx_create(&hwdev, AV_HWDEVICE_TYPE_VAAPI, DEVICE, NULL, 0) < 0) {
         say("codecs");
@@ -522,8 +603,12 @@ static int probe(void) {
             H = 368;
             AVCodecContext *e = encoder_open(all[i], fr, 640, 368, why, sizeof(why));
             if (e) {
-                strcat(line, " ");
-                strcat(line, all[i]);
+                if (decodes(e, fr, 640, 368)) {
+                    strcat(line, " ");
+                    strcat(line, all[i]);
+                } else {
+                    say("broken %s: its pictures do not decode, so it is left out", all[i]);
+                }
                 avcodec_free_context(&e);
             }
         }

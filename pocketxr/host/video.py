@@ -19,6 +19,8 @@ def probe(log=print):
         log("host: the video program did not run: %s" % e)
         return []
     for line in r.stdout.splitlines():
+        if line.startswith("broken"):
+            log("host: encoder " + line)
         if line.startswith("codecs"):
             return [c for c in line.split()[1:] if c in CODECS]
     return []

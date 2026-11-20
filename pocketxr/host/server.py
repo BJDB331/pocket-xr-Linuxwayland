@@ -545,6 +545,7 @@ class Screen:
                                   on_end=lambda code: self._video_ended(s, code))
 
     def _placed(self, s, name):
+        desktop.close_display_switch(self.log)
         layout = self.host.layout
         layout.refresh(place=True)
         s.output = name

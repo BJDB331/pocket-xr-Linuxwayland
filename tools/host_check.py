@@ -16,6 +16,7 @@ import http.client
 import os
 import re
 import secrets
+import shutil
 import socket
 import ssl
 import struct
@@ -311,6 +312,10 @@ def main():
                 pass
         stop.set()
         whole = 0
+        stream = a.dump or os.path.join(tmp, "frames.bin")
+        if os.path.exists(stream):
+            os.remove(stream)
+        started = False  # frames go to the file from the first key frame on, as a decoder needs them
         for fi in sorted(frames):
             parts = frames[fi]
             blocks = max(v[1] for v in parts.values()) + 1
@@ -322,12 +327,13 @@ def main():
                 bad += 1
                 continue
             whole += 1
-            if a.dump:
+            started = started or data[3] == 2
+            if started:
                 last_len = struct.unpack_from("<H", data, 4)[0]
                 per = a.packet_size - 16
                 n_shards = len(parts)
                 frame_bytes = data[:per * (n_shards - 1) + last_len][8:]
-                with open(a.dump, "ab") as f:
+                with open(stream, "ab") as f:
                     f.write(frame_bytes)
             if data[3] == 2:
                 keys += 1
@@ -340,6 +346,16 @@ def main():
         ok("video: a key frame with its parameter sets", keys >= 1 and first_key_nals is not None and
            all(t in first_key_nals for t in want), "%d key frames, first one's NAL types %s" % (keys, first_key_nals))
         ok("video: the key frame asked for came", keys >= 2, "%d key frames" % keys)
+        # Whole frames can still hold a stream no decoder takes (the Deck's hevc_vaapi, 20 Nov 2026): decode them.
+        if shutil.which("ffmpeg") and os.path.exists(stream):
+            r = subprocess.run(["ffmpeg", "-v", "error", "-f", "hevc" if hevc else "h264", "-i", stream, "-f", "null",
+                                "-"], capture_output=True, text=True)
+            errors = [ln for ln in r.stderr.splitlines()
+                      if ln.strip() and not ln.startswith("[null") and "Last message repeated" not in ln]
+            ok("video: the frames decode (FFmpeg)", r.returncode == 0 and not errors,
+               "%d errors%s" % (len(errors), (", first: " + errors[0]) if errors else ""))
+        else:
+            print("     (no ffmpeg here: the frames were not decoded)", flush=True)
         ok("sound: packets decrypted and decoded", audio_ok > 0 and audio_bad == 0,
            "%d decoded, %d bad" % (audio_ok, audio_bad))
         _, x = c.http("cancel", {}, secure=True)

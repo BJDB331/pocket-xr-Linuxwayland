@@ -108,6 +108,43 @@ class Layout:
             return self.box
 
 
+# ---- KDE's display-switch pop-up ----
+
+OSD_SERVICE = "org.kde.kscreen.osdService"
+OSD_WATCH = 6.0  # seconds after a PC screen's output appears
+
+
+def _bus_has(name):
+    code, out = _run(["busctl", "--user", "call", "org.freedesktop.DBus", "/org/freedesktop/DBus",
+                      "org.freedesktop.DBus", "NameHasOwner", "s", name], timeout=3)
+    return code == 0 and out.strip() == "b true"
+
+
+def close_display_switch(log=print, seconds=OSD_WATCH, poll=0.1):
+    """Close KDE's display-switch pop-up ("Only use external screen" and the other layouts) if it opens just after a PC
+    screen's output appears. KWin 6.7 opens it itself when it meets a set of exactly two outputs, one built in, with no
+    stored setup (workspace.cpp, updateOutputConfiguration). The Deck's own screen with one PC screen is such a set
+    the first time each PC screen is used, and the pop-up then stays on the Deck's screen until a choice is made
+    (seen on the Deck, 20 Nov 2026). hideOsd ends kscreen's pop-up service. The watch lasts a few seconds from the
+    output's appearance, so other uses of the pop-up are left alone."""
+    if not shutil.which("busctl"):
+        return None
+
+    def watch():
+        end = time.time() + seconds
+        while time.time() < end:
+            if _bus_has(OSD_SERVICE):
+                _run(["busctl", "--user", "call", OSD_SERVICE, "/org/kde/kscreen/osdService", OSD_SERVICE, "hideOsd"],
+                     timeout=3)
+                log("host: closed KDE's display-switch pop-up for the new PC screen")
+                return
+            time.sleep(poll)
+
+    t = threading.Thread(target=watch, daemon=True, name="display-switch")
+    t.start()
+    return t
+
+
 # ---- clipboard ----
 
 def _qdbus():

@@ -382,6 +382,26 @@ def test_virtual_outputs_side_by_side():
     assert desktop.bounds(outs) == (0, 0, 2869, 1080)
 
 
+def test_display_switch_popup_is_closed():
+    calls, owned = [], [False, False, True]
+
+    def run(args, timeout=10, text_in=None):
+        calls.append(args)
+        if "NameHasOwner" in args:
+            return 0, "b true\n" if owned.pop(0) else "b false\n"
+        return 0, ""
+
+    real_run, real_which = desktop._run, desktop.shutil.which
+    desktop._run, desktop.shutil.which = run, lambda name: "/usr/bin/" + name
+    try:
+        logged = []
+        desktop.close_display_switch(logged.append, seconds=2, poll=0.01).join(3)
+    finally:
+        desktop._run, desktop.shutil.which = real_run, real_which
+    assert [a[-1] for a in calls] == [desktop.OSD_SERVICE] * 3 + ["hideOsd"]
+    assert calls[-1][3] == desktop.OSD_SERVICE and len(logged) == 1
+
+
 # ---- sound ----
 
 def test_sound_packets():
