@@ -105,6 +105,8 @@ class Gaming:
         self.reshade = None
         self.effect_on = False
         self.lock = threading.Lock()
+        self.other_driver = []  # XR Gaming's driver, looked for every few seconds while glasses are in
+        self.other_checked = 0.0
         self.buttons = DeckButtons(self._button, log=log)
         self.buttons.start()
         threading.Thread(target=self._control_server, name="control", daemon=True).start()
@@ -120,7 +122,21 @@ class Gaming:
             "chosen": self.settings.get("mode", "space"),
             "size": float(self.settings.get("size", 0.8)),
             "lang": i18n.lang(),  # the Quick Access panel speaks the same language
+            "notice": gmod.xr_gaming_text() if (self.glasses and self.other_driver) else "",
         }
+
+    def _check_other_driver(self, now):
+        if now - self.other_checked < 5.0:
+            return
+        self.other_checked = now
+        found = gmod.xr_gaming_running() if self.glasses else []
+        if found != self.other_driver:
+            if found:
+                self.log("gaming: XR Gaming's driver is running (" +
+                         ", ".join(f"{name}, pid {pid}" for pid, name in found) + "); it talks to the same glasses")
+            elif self.other_driver:
+                self.log("gaming: XR Gaming's driver stopped")
+            self.other_driver = found
 
     def _request(self, req):
         op = req.get("op")
@@ -217,6 +233,12 @@ class Gaming:
 
     def _apply_mode(self):
         m = self.mode()
+        if isinstance(self.reader, hidimu.AirReader):
+            # Off leaves the Air family's glasses alone: no motion stream, and on the XBX no MCU heartbeat.
+            paused = self.settings.get("mode", "space") == "off"
+            if paused != self.reader.paused:
+                self.reader.paused = paused
+                self.log("gaming: head tracking paused (off)" if paused else "gaming: head tracking on")
         if self.control:
             self.control.want("steady" if m == "steady" else "3dof")
         if self.head:
@@ -362,6 +384,7 @@ class Gaming:
                         if self.reshade is None:
                             self._connect_gamescope()
                         self._check_glasses()
+                        self._check_other_driver(now)
                         if self.glasses and self.reshade and not self.effect_on and self.mode() == "space":
                             self._effect(True)
                     else:

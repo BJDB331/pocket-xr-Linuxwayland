@@ -20,7 +20,7 @@ VITURE_BEAST_1201 = 0x1201
 BEAST_PRODUCTS = frozenset({VITURE_BEAST, VITURE_BEAST_1201})
 VITURE_MICROPHONE = 0x1102
 # The Air models Pocket XR reads (AirImuProtocol): Air, Air 2, Air 2 Pro, Air 2 Ultra, and the XBX A01 and A01+
-# (not yet tried with Pocket XR: the same protocol on HID interface 1, after wheaney's nrealAirLinuxDriver, MIT).
+# (the same protocol on HID interface 1, after wheaney's nrealAirLinuxDriver, MIT; not yet seen working: hidimu.py).
 AIR_IMU = {0x0424: "XREAL Air", 0x0428: "XREAL Air 2", 0x0432: "XREAL Air 2 Pro", 0x0426: "XREAL Air 2 Ultra",
            0x0440: "XREAL XBX A01", 0x0442: "XREAL XBX A01+"}
 AIR_FAMILY = {0x0423, 0x0424, 0x0425, 0x0426, 0x0427, 0x0428, 0x0431, 0x0432, 0x043F, 0x0440, 0x0441, 0x0442}
@@ -163,3 +163,33 @@ def detect(devices=None):
 def other_glasses():
     """Glasses Pocket XR does not know, seen only as a second display: shown flat, as Pocket XR's plain fallback."""
     return Glasses(tr("Other glasses"), "other", 0, 0)
+
+
+# XR Gaming (wheaney's XRLinuxDriver, a Decky plugin): its driver, xrDriver, runs as a service and talks to the same
+# glasses. Two programs asking one pair of glasses for their motion get in each other's way.
+XR_GAMING_PROGRAMS = ("xrDriver",)
+XR_GAMING_SERVICES = ("~/.config/systemd/user/xr-driver.service", "/etc/systemd/system/xr-driver.service",
+                      "/usr/lib/systemd/system/xr-driver.service")
+
+
+def xr_gaming_running(proc="/proc"):
+    """[(pid, program)] of XR Gaming's driver running now ([] when it is not)."""
+    found = []
+    for d in glob.glob(os.path.join(proc, "[0-9]*")):
+        try:
+            with open(os.path.join(d, "comm")) as f:
+                name = f.read().strip()
+        except OSError:
+            continue
+        if name in XR_GAMING_PROGRAMS:
+            found.append((int(os.path.basename(d)), name))
+    return sorted(found)
+
+
+def xr_gaming_installed():
+    """The xr-driver service files that are present."""
+    return [p for p in (os.path.expanduser(x) for x in XR_GAMING_SERVICES) if os.path.exists(p)]
+
+
+def xr_gaming_text():
+    return tr("XR Gaming is running; turn it off for Pocket XR's head tracking (or uninstall it).")

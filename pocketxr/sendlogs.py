@@ -223,7 +223,20 @@ def glasses_report(root="/sys/bus/usb/devices"):
                     out.append("       " + data[k:k + 32].hex(" "))
     if not out:
         out.append("No XREAL or VITURE device on USB.")
+    out.append(xr_gaming_line())
     return "\n".join(out) + "\n"
+
+
+def xr_gaming_line():
+    """Whether XR Gaming's driver (xrDriver) runs or is installed: it talks to the same glasses."""
+    running = gmod.xr_gaming_running()
+    installed = gmod.xr_gaming_installed()
+    if running:
+        return ("XR Gaming's driver: running (" + ", ".join(f"{n}, pid {p}" for p, n in running) + "). "
+                + gmod.xr_gaming_text())
+    if installed:
+        return "XR Gaming's driver: installed (" + ", ".join(installed) + "), not running"
+    return "XR Gaming's driver: not found"
 
 
 def log_files(home):

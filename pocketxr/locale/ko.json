@@ -189,5 +189,6 @@
   "Pocket XR's Desktop Mode needs a Plasma (X11) session. Wayland isn't supported yet. Log out and pick Plasma (X11), or use Gaming Mode.": "Pocket XR의 데스크톱 모드는 Plasma (X11) 세션이 필요해요. Wayland는 아직 지원하지 않아요. 로그아웃한 뒤 Plasma (X11)을 고르거나 게임 모드를 써 주세요.",
   "Screen gap": "화면 간격",
   "The space between screens in Steady mode.": "Steady 모드에서 화면 사이의 간격이에요.",
-  "Pocket XR's Desktop Mode needs Plasma on X11, and this SteamOS starts Desktop Mode on Wayland. To change that, run this in Konsole: {command} Then go back to Gaming Mode and switch to Desktop again. Or use Pocket XR in Gaming Mode.": "Pocket XR의 데스크톱 모드는 X11의 Plasma가 필요한데, 이 SteamOS는 데스크톱 모드를 Wayland로 시작합니다. 바꾸려면 Konsole에서 다음을 실행하세요: {command} 그다음 게임 모드로 돌아가 다시 데스크톱으로 전환하세요. 또는 게임 모드에서 Pocket XR을 사용하세요."
+  "Pocket XR's Desktop Mode needs Plasma on X11, and this SteamOS starts Desktop Mode on Wayland. To change that, run this in Konsole: {command} Then go back to Gaming Mode and switch to Desktop again. Or use Pocket XR in Gaming Mode.": "Pocket XR의 데스크톱 모드는 X11의 Plasma가 필요한데, 이 SteamOS는 데스크톱 모드를 Wayland로 시작합니다. 바꾸려면 Konsole에서 다음을 실행하세요: {command} 그다음 게임 모드로 돌아가 다시 데스크톱으로 전환하세요. 또는 게임 모드에서 Pocket XR을 사용하세요.",
+  "XR Gaming is running; turn it off for Pocket XR's head tracking (or uninstall it).": "XR Gaming이 실행 중이에요. Pocket XR의 헤드 트래킹을 쓰려면 끄거나 제거하세요."
 }

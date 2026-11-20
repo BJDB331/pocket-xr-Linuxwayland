@@ -223,9 +223,150 @@ def test_xbx_a01_reads_the_air_imu_on_interface_1():
         g = glasses.detect([(0x3318, pid, [0x03] * 3, "xbx a01+")])
         assert g.family == "air" and g.imu == "air" and g.name == name and g.why_no_tracking() is None
         assert hidimu.air_interface(pid) == 1 and hidimu.AIR_MODELS[pid] == name
-    # The reader opens interface 1 only, never the MCU on 0 or interface 2
+    # Interface 1 first (wheaney's library); the MCU on 0 and interface 2 only if it stays silent (see below)
     nodes = [(0, "/dev/hidraw3", 0x0442), (1, "/dev/hidraw4", 0x0442), (2, "/dev/hidraw5", 0x0442)]
     assert [n for n in nodes if n[0] == hidimu.air_interface(0x0442)] == [(1, "/dev/hidraw4", 0x0442)]
+
+
+def test_mcu_frame_matches_the_library_layout():
+    import struct
+    import zlib
+    f = hidimu.mcu_command(0x31, b"3.1.1")
+    assert f[0] == 0xFD and len(f) == 5 + 17 + 5
+    length, ts, msg_id = struct.unpack_from("<HQH", f, 5)
+    assert (length, ts, msg_id) == (22, 0, 0x31) and f[17:22] == bytes(5) and f[22:] == b"3.1.1"
+    assert struct.unpack_from("<I", f, 1)[0] == zlib.crc32(f[5:]) & 0xFFFFFFFF
+    assert hidimu.mcu_heartbeat()[15:17] == b"\x1a\x00" and len(hidimu.mcu_heartbeat()) == 30
+    assert [m for m, _ in hidimu.MCU_BOOTSTRAP] == [0x26, 0x57, 0x12, 0x02, 0x34, 0x35, 0x31]
+    assert hidimu.hexstart(bytes(range(20)), 4) == "00 01 02 03 ... (20 bytes)"
+
+
+class FakeXbx:
+    """An XBX A01+ on socket pairs: interface 0 answers MCU frames; an IMU interface streams Air samples after the
+    stream command, if streams(interface, mcu_awake) says so."""
+
+    def __init__(self, streams):
+        import threading
+        self.streams = streams
+        self.awake = False
+        self.opened = []
+        self.lock = threading.Lock()
+
+    def nodes(self):
+        return [(n, "/dev/fake%d" % n, 0x0442, "/sys/fake/1-1:1.%d" % n) for n in (0, 1, 2)]
+
+    def open(self, path):
+        import socket
+        import threading
+        num = int(path[-1])
+        self.opened.append(num)
+        a, b = socket.socketpair(socket.AF_UNIX, socket.SOCK_SEQPACKET)
+        threading.Thread(target=self._serve, args=(num, b), daemon=True).start()
+        return a.detach()
+
+    def _serve(self, num, sock):
+        import threading
+        import time
+        streaming = {"on": False}
+
+        def samples():
+            ts = 0
+            while streaming["on"]:
+                ts += 1000
+                try:
+                    sock.send(hidimu.air_report(ts, (0.0, 0.0, 0.0), (0.0, 0.0, 1.0)))
+                except OSError:
+                    return
+                time.sleep(0.004)
+        while True:
+            try:
+                data = sock.recv(64)
+            except OSError:
+                break
+            if not data:
+                break
+            if num == 0 and data[0] == 0xFD:
+                if data[15] == 0x31:
+                    self.awake = True
+                sock.send(hidimu.mcu_command(data[15], b"\x00"))
+            elif data[0] == 0xAA and data[7] == 0x19:
+                if data[8] == 1 and not streaming["on"] and self.streams(num, self.awake):
+                    streaming["on"] = True
+                    threading.Thread(target=samples, daemon=True).start()
+                elif data[8] == 0:
+                    streaming["on"] = False
+        streaming["on"] = False
+        sock.close()
+
+
+def _run_reader(fake):
+    import time
+    lines = []
+    got = []
+    r = hidimu.AirReader(lambda *a: got.append(a), 0x0442, log=lines.append, nodes=fake.nodes, opener=fake.open)
+    r.WAIT_S = 0.4
+    r.start()
+    end = time.monotonic() + 10
+    while time.monotonic() < end and len(got) < 20:
+        time.sleep(0.05)
+    r.stop = True
+    r.join(3)
+    return r, lines, got
+
+
+def test_xbx_wakes_the_mcu_when_interface_1_is_silent():
+    if not hasattr(__import__("socket"), "AF_UNIX"):
+        return
+    fake = FakeXbx(lambda num, awake: num == 1 and awake)
+    r, lines, got = _run_reader(fake)
+    assert len(got) >= 20, lines
+    assert r.decision == "interface 1 (/dev/fake1), with the MCU heartbeat", lines
+    text = "\n".join(lines)
+    assert "imu: fake1 is interface 1 (/sys/fake/1-1:1.1)" in text
+    assert "no samples on interface 1" in text and "MCU heartbeat running on interface 0" in text
+    assert "imu: /dev/fake0 read fd " in text  # the MCU's answers, in hex
+    assert fake.opened[:3] == [1, 0, 1], fake.opened
+    assert r._mcu is None and "imu: MCU heartbeat stopped" in text  # stopped with the reader
+
+
+def test_xbx_tries_interface_2_last():
+    if not hasattr(__import__("socket"), "AF_UNIX"):
+        return
+    fake = FakeXbx(lambda num, awake: num == 2)
+    r, lines, got = _run_reader(fake)
+    assert len(got) >= 20, lines
+    assert r.decision == "interface 2 (/dev/fake2), with the MCU heartbeat", lines
+    assert fake.opened[:4] == [1, 0, 1, 2], fake.opened
+
+
+def test_air_2_never_opens_another_interface():
+    if not hasattr(__import__("socket"), "AF_UNIX"):
+        return
+    import time
+    fake = FakeXbx(lambda num, awake: False)
+    lines = []
+    r = hidimu.AirReader(lambda *a: None, 0x0428, log=lines.append,
+                         nodes=lambda: [(3, "/dev/fake3", 0x0428), (4, "/dev/fake4", 0x0428)], opener=fake.open)
+    r.WAIT_S, r.RETRY_S = 0.3, 0.2
+    r.start()
+    time.sleep(1.2)
+    r.stop = True
+    r.join(3)
+    assert fake.opened and set(fake.opened) == {3}, fake.opened
+    assert r._mcu is None
+
+
+def test_xr_gaming_is_found():
+    import tempfile
+    root = tempfile.mkdtemp()
+    for pid, name in ((12, "bash"), (345, "xrDriver"), (7, "steam")):
+        os.makedirs(os.path.join(root, str(pid)))
+        with open(os.path.join(root, str(pid), "comm"), "w") as f:
+            f.write(name + "\n")
+    assert glasses.xr_gaming_running(root) == [(345, "xrDriver")]
+    os.remove(os.path.join(root, "345", "comm"))
+    assert glasses.xr_gaming_running(root) == []
+    assert "XR Gaming" in glasses.xr_gaming_text()
 
 
 def test_deck_buttons_never_open_the_glasses():

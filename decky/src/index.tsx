@@ -19,6 +19,7 @@ type Status = {
   lang?: string;
   logs?: string;
   logs_error?: string;
+  notice?: string; // already in the panel's language: e.g. XR Gaming's driver is running
 };
 
 const request = callable<[req: Record<string, unknown>], Status>("request");
@@ -71,6 +72,9 @@ function Content() {
       <PanelSection>
         <PanelSectionRow>
           <div style={{ fontSize: "13px", lineHeight: "18px", color: "#b8bcbf" }}>{statusLine(st, w)}</div>
+          {st?.notice ? (
+            <div style={{ fontSize: "13px", lineHeight: "18px", color: "#ffc857", marginTop: "6px" }}>{st.notice}</div>
+          ) : null}
         </PanelSectionRow>
       </PanelSection>
       <PanelSection title={w.view}>
