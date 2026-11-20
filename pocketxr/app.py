@@ -10,6 +10,7 @@ import json
 import math
 import os
 import queue
+import shutil
 import signal
 import subprocess
 import sys
@@ -120,6 +121,18 @@ def wayland_session():
     return kind == "wayland" or (kind != "x11" and bool(os.environ.get("WAYLAND_DISPLAY")))
 
 
+def steamos():
+    """SteamOS, where steamosctl picks Desktop Mode's session."""
+    return bool(shutil.which("steamosctl"))
+
+
+def steamos_wayland_text():
+    return tr("Pocket XR's Desktop Mode needs Plasma on X11, and this SteamOS starts Desktop Mode on Wayland. "
+              "To change that, run this in Konsole: {command} Then go back to Gaming Mode and switch to Desktop "
+              "again. Or use Pocket XR in Gaming Mode.",
+              command="steamosctl set-default-desktop-session plasmax11.desktop")
+
+
 class App:
     def __init__(self):
         self.log = Log()
@@ -157,11 +170,14 @@ class App:
             return 0
         self.log(f"Pocket XR for Steam Deck starting, settings {self.settings}")
         if wayland_session():
-            # Desktop Mode moves app windows, the pointer and the view with X11, as SteamOS's KDE desktop is X11.
-            # A Wayland desktop (CachyOS, Bazzite and others by default) doesn't let X11 apps do that (a tester on
-            # CachyOS's Wayland desktop lost control of the Deck and had to hard restart). Say so and stop instead.
-            text = tr("Pocket XR's Desktop Mode needs a Plasma (X11) session. Wayland isn't supported yet. "
-                      "Log out and pick Plasma (X11), or use Gaming Mode.")
+            # Desktop Mode moves app windows, the pointer and the view with X11. A Wayland desktop doesn't let X11
+            # apps do that (a tester on CachyOS's Wayland desktop lost control of the Deck and had to hard restart).
+            # Say so and stop instead. SteamOS 3.9 starts Desktop Mode on Wayland by default (a Deck on 3.9.5,
+            # 20 Nov 2026: steamosctl get-default-desktop-session gave plasma.desktop; plasmax11.desktop is the other
+            # choice), and Desktop Mode is entered from Gaming Mode, so there the way to X11 is steamosctl.
+            text = steamos_wayland_text() if steamos() else tr(
+                "Pocket XR's Desktop Mode needs a Plasma (X11) session. Wayland isn't supported yet. "
+                "Log out and pick Plasma (X11), or use Gaming Mode.")
             self.log("Wayland desktop session (XDG_SESSION_TYPE=%s, WAYLAND_DISPLAY=%s): not starting" %
                      (os.environ.get("XDG_SESSION_TYPE"), os.environ.get("WAYLAND_DISPLAY")))
             notify(text)

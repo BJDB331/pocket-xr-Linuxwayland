@@ -30,8 +30,12 @@ curl -L https://github.com/pocket-xr/pocket-xr-deck/releases/latest/download/poc
 Pocket XR then appears on the desktop and in the app menu, and starts by itself in Gaming Mode. No password is
 needed. It installs into your home folder, so SteamOS updates leave it alone. Run the same line again to update.
 
-Not on SteamOS? Desktop Mode needs KDE Plasma on X11, as SteamOS has. On a Wayland desktop (the default on CachyOS,
-Bazzite and others) log out and pick **Plasma (X11)**, or use Gaming Mode. If a back button also opens your
+Pocket XR's own Desktop Mode view needs KDE Plasma on X11. The SteamOS 3.9.5 Decks we have seen start Desktop Mode
+on Wayland. To change that, run `steamosctl set-default-desktop-session plasmax11.desktop` in Konsole, then go back
+to Gaming Mode and switch to Desktop again (not yet tried; `plasma.desktop` puts Wayland back). Your Deck on your
+phone (below) needs Wayland, so it stops working on X11. Gaming Mode works either way.
+
+Not on SteamOS? On a Wayland desktop (the default on CachyOS, Bazzite and others) log out and pick **Plasma (X11)**, or use Gaming Mode. If a back button also opens your
 desktop's own menu, your system has mapped that button too: clear it in Steam's desktop controller layout or your
 handheld tool (like HHD or InputPlumber).
 
@@ -174,6 +178,7 @@ The same glasses as Pocket XR on Android:
 | XREAL Aura | Yes | Yes. Pocket XR turns the Aura's Spatial Anchor on and off for you. | Yes |
 | XREAL One, One Pro, One Pro+, 1S | Yes | With the XREAL Eye. You turn 6DoF on in the glasses' menu when asked. | Not yet: please try it |
 | XREAL Air, Air 2, Air 2 Pro, Air 2 Ultra | Yes | No | Not yet: please try it |
+| XREAL XBX A01, A01+ | Yes, untested: the Air's tracking on the glasses' HID interface 1 | No | Not yet: please try it |
 | VITURE Beast | Yes | No (waits on VITURE's SDK) | Not yet: please try it |
 | Other VITURE glasses | Experimental, off until you turn it on in the panel | No | Not yet: please try it |
 | Other glasses | No, the windows are shown flat | No | Not yet: please try it |

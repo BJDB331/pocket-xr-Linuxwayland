@@ -217,6 +217,35 @@ def test_glasses_families():
     assert hidimu.air_interface(0x0426) == 2 and hidimu.air_interface(0x0428) == 3
 
 
+def test_xbx_a01_reads_the_air_imu_on_interface_1():
+    # A tester's A01+ (November 2026): three HID interfaces, product string "xbx a01+"
+    for pid, name in ((0x0440, "XREAL XBX A01"), (0x0442, "XREAL XBX A01+")):
+        g = glasses.detect([(0x3318, pid, [0x03] * 3, "xbx a01+")])
+        assert g.family == "air" and g.imu == "air" and g.name == name and g.why_no_tracking() is None
+        assert hidimu.air_interface(pid) == 1 and hidimu.AIR_MODELS[pid] == name
+    # The reader opens interface 1 only, never the MCU on 0 or interface 2
+    nodes = [(0, "/dev/hidraw3", 0x0442), (1, "/dev/hidraw4", 0x0442), (2, "/dev/hidraw5", 0x0442)]
+    assert [n for n in nodes if n[0] == hidimu.air_interface(0x0442)] == [(1, "/dev/hidraw4", 0x0442)]
+
+
+def test_deck_buttons_never_open_the_glasses():
+    import tempfile
+    from pocketxr import deckpad
+    root = tempfile.mkdtemp()
+    for n, ev in ((2, "HID_ID=0003:00003318:00000442\n"), (4, "HID_ID=0003:00003318:00000442\n"),
+                  (6, "HID_ID=0003:000028DE:00001205\n")):
+        d = os.path.join(root, "hidraw%d" % n, "device")
+        os.makedirs(d)
+        with open(os.path.join(d, "uevent"), "w") as f:
+            f.write(ev)
+    real = deckpad.glob.glob
+    deckpad.glob.glob = lambda pattern: sorted(real(os.path.join(root, "hidraw*")))
+    try:
+        assert deckpad.find_device() == ["/dev/hidraw6"]
+    finally:
+        deckpad.glob.glob = real
+
+
 def test_joycon_pose_and_buttons():
     import math
     from pocketxr import joycon
