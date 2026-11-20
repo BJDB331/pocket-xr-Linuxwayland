@@ -225,7 +225,7 @@ It's still early, and I put out updates almost every day. Bug reports, glasses r
 
 Fixes and new support that came from your reports:
 
-- Thanks to Pierre Zammit for his Steam Deck logs with the XREAL XBX A01+, which led to head tracking for the XBX A01
+- Thanks to Pierre D. Zammit for his Steam Deck logs with the XREAL XBX A01+, which led to head tracking for the XBX A01
   and A01+ (0.6.0).
 
 ## Support
