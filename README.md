@@ -221,6 +221,13 @@ It's still early, and I put out updates almost every day. Bug reports, glasses r
   an [issue](https://github.com/pocket-xr/pocket-xr-deck/issues) and attach the zip.
 - **An idea or a question?** Start a [discussion](https://github.com/pocket-xr/pocket-xr-deck/discussions).
 
+### Thanks
+
+Fixes and new support that came from your reports:
+
+- Thanks to Pierre Zammit for his Steam Deck logs with the XREAL XBX A01+, which led to head tracking for the XBX A01
+  and A01+ (0.6.0).
+
 ## Support
 
 [![Buy me a beer on Ko-fi](https://img.shields.io/badge/Buy%20me%20a%20beer-Ko--fi-FF5E5B?style=for-the-badge&logo=ko-fi&logoColor=white)](https://ko-fi.com/mikehaye)
