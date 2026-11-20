@@ -19,6 +19,8 @@
   The message now gives the `steamosctl` command that switches it to X11 (not yet tried), or points to Gaming Mode.
   On X11 the phone's PC screens stop working.
 
+Thanks to Pierre Zammit for his Steam Deck logs with the XREAL XBX A01+, which led to XBX A01 and A01+ head tracking.
+
 ## 0.5.1 (18 Nov 2026)
 
 - The VITURE Beast with USB id 35CA:1201 is recognised as a Beast.
