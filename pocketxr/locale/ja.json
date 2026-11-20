@@ -190,5 +190,10 @@
   "Screen gap": "画面の間隔",
   "The space between screens in Steady mode.": "Steady モードでの画面と画面の間隔です。",
   "Pocket XR's Desktop Mode needs Plasma on X11, and this SteamOS starts Desktop Mode on Wayland. Use Pocket XR in Gaming Mode: it starts by itself there.": "Pocket XR のデスクトップモードには X11 の Plasma が必要ですが、この SteamOS はデスクトップモードを Wayland で起動します。Pocket XR はゲームモードで使ってください。そこでは自動で起動します。",
-  "XR Gaming's driver is running, even with its plugin removed, and it takes the glasses and the game screen. Stop it in Konsole: {command}": "XR Gaming のドライバーがプラグインを削除した後も動いていて、グラスとゲーム画面を使っています。Konsole で止めてください: {command}"
+  "XR Gaming's driver is running, even with its plugin removed, and it takes the glasses and the game screen. Stop it in Konsole: {command}": "XR Gaming のドライバーがプラグインを削除した後も動いていて、グラスとゲーム画面を使っています。Konsole で止めてください: {command}",
+  "Stop XR Gaming's driver": "XR Gaming のドライバーを止める",
+  "Put the desktop back to Wayland": "デスクトップを Wayland に戻す",
+  "Done. XR Gaming's driver is stopped and won't start again. Unplug the glasses and plug them back in.": "完了。XR Gaming のドライバーを止めました。もう起動しません。グラスを抜いて、もう一度差してください。",
+  "Done. It applies the next time you switch to Desktop.": "完了。次にデスクトップに切り替えたときに反映されます。",
+  "That didn't work: {error}": "うまくいきませんでした: {error}"
 }

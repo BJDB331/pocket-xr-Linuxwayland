@@ -34,7 +34,8 @@ Pocket XR's own Desktop Mode view needs KDE Plasma on X11. The SteamOS 3.9.5 Dec
 on Wayland, so on those use Pocket XR in Gaming Mode. Please don't switch SteamOS's desktop to X11 for it: a tester's
 Deck had trouble after that switch (a trackpad that would not click, then hangs at shutdown and boot). If you already
 switched, this in Konsole puts Wayland back, from the next time you switch to Desktop:
-`steamosctl set-default-desktop-session plasma.desktop`. Your Deck on your phone (below) needs Wayland.
+`steamosctl set-default-desktop-session plasma.desktop` (or press **Put the desktop back to Wayland** in Quick
+Access). Your Deck on your phone (below) needs Wayland.
 
 Not on SteamOS? On a Wayland desktop (the default on CachyOS, Bazzite and others) log out and pick **Plasma (X11)**, or use Gaming Mode. If a back button also opens your
 desktop's own menu, your system has mapped that button too: clear it in Steam's desktop controller layout or your
@@ -194,7 +195,7 @@ The same glasses as Pocket XR on Android:
 **XR Gaming installed too?** Its driver, `xrDriver`, talks to the same glasses and sets the game screen's effect in
 Gaming Mode itself, so the two get in each other's way. Removing the XR Gaming plugin from Decky leaves the driver
 running (seen on a tester's Deck). Pocket XR says so in the panel and in Quick Access when it sees it. To stop it, run
-this in Konsole: `systemctl --user disable --now xr-driver`.
+this in Konsole: `systemctl --user disable --now xr-driver`, or press **Stop XR Gaming's driver** in Quick Access.
 
 Settings on the glasses themselves, as on Android:
 

@@ -195,6 +195,47 @@ def xr_gaming_installed():
 
 
 XR_GAMING_STOP = "systemctl --user disable --now xr-driver"
+XR_GAMING_UNIT = "xr-driver"
+
+
+def _run(args, timeout=20):
+    """(exit code, output) of a command; (None, why) when it does not run."""
+    import subprocess
+    try:
+        r = subprocess.run(args, capture_output=True, text=True, timeout=timeout)
+    except (OSError, subprocess.SubprocessError) as e:
+        return None, str(e)
+    return r.returncode, (r.stdout + r.stderr).strip()
+
+
+def xr_gaming_enabled(run=_run):
+    """True when XR Gaming's user service starts by itself (systemctl --user is-enabled says enabled)."""
+    code, out = run(["systemctl", "--user", "is-enabled", XR_GAMING_UNIT], 5)
+    return code == 0 and out.splitlines()[:1] == ["enabled"]
+
+
+def stop_xr_gaming(run=_run):
+    """Stops XR Gaming's driver and keeps it from starting again: (ok, output). No password: it is the user's own
+    service."""
+    code, out = run(["systemctl", "--user", "disable", "--now", XR_GAMING_UNIT])
+    return code == 0, out
+
+
+# SteamOS's desktop session for Desktop Mode (steamosctl, no password): plasma.desktop is Wayland, plasmax11.desktop X11.
+WAYLAND_SESSION = "plasma.desktop"
+X11_SESSION = "plasmax11.desktop"
+
+
+def desktop_session(run=_run):
+    """The default Desktop Mode session on SteamOS, e.g. "plasma.desktop" (None without steamosctl)."""
+    code, out = run(["steamosctl", "get-default-desktop-session"], 5)
+    return out.strip() if code == 0 else None
+
+
+def wayland_back(run=_run):
+    """(ok, output): Desktop Mode starts on Wayland again, from the next switch to Desktop."""
+    code, out = run(["steamosctl", "set-default-desktop-session", WAYLAND_SESSION])
+    return code == 0, out
 
 
 def xr_gaming_text():

@@ -452,6 +452,50 @@ def test_gaming_logs_where_the_head_points():
     assert "gravity 9.80 m/s2" in lines[0] and "1000 reports" in lines[0], lines
 
 
+def test_panel_offers_the_fixes_only_when_they_apply():
+    from pocketxr import gaming
+    calls = []
+
+    def run(args, timeout=20):
+        calls.append(args)
+        return 0, ""
+    assert glasses.stop_xr_gaming(run) == (True, "")
+    assert calls[-1] == ["systemctl", "--user", "disable", "--now", "xr-driver"]
+    assert glasses.wayland_back(run)[0]
+    assert calls[-1] == ["steamosctl", "set-default-desktop-session", "plasma.desktop"]
+    assert glasses.desktop_session(lambda a, t=20: (0, "plasmax11.desktop\n")) == "plasmax11.desktop"
+    assert glasses.desktop_session(lambda a, t=20: (1, "no")) is None
+    assert glasses.xr_gaming_enabled(lambda a, t=20: (0, "enabled\n"))
+    assert not glasses.xr_gaming_enabled(lambda a, t=20: (1, "disabled\n"))
+
+    class G:
+        pass
+    g = G()
+    g.other_driver, g.xr_gaming_enabled, g.session = [], False, "plasma.desktop"
+    assert gaming.Gaming._actions(g) == []
+    g.other_driver = [(345, "xrDriver")]
+    g.session = "plasmax11.desktop"
+    assert [a["op"] for a in gaming.Gaming._actions(g)] == ["stop_xr_gaming", "wayland_back"]
+    g.other_driver, g.xr_gaming_enabled = [], True  # stopped but would start again at the next login
+    assert [a["op"] for a in gaming.Gaming._actions(g)] == ["stop_xr_gaming", "wayland_back"]
+
+    # the button's command, its log line and the panel's text, done and failed
+    lines = []
+    g.log = lines.append
+    g._check_other_driver = lambda now: None
+    real = glasses._run
+    try:
+        glasses.stop_xr_gaming.__defaults__ = (lambda a, t=20: (0, ""),)
+        assert gaming.Gaming._do_action(g, "stop_xr_gaming").startswith("Done. XR Gaming's driver is stopped")
+        assert "systemctl --user disable --now xr-driver): done" in lines[-1]
+        glasses.wayland_back.__defaults__ = (lambda a, t=20: (1, "Failed to connect\nno daemon"),)
+        assert gaming.Gaming._do_action(g, "wayland_back") == "That didn't work: no daemon"
+        assert "plasma.desktop: failed" in lines[-1]
+    finally:
+        glasses.stop_xr_gaming.__defaults__ = (real,)
+        glasses.wayland_back.__defaults__ = (real,)
+
+
 def test_xr_gaming_is_found():
     import tempfile
     root = tempfile.mkdtemp()

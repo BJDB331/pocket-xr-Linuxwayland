@@ -190,5 +190,10 @@
   "Screen gap": "Separación entre pantallas",
   "The space between screens in Steady mode.": "El espacio entre las pantallas en el modo Steady.",
   "Pocket XR's Desktop Mode needs Plasma on X11, and this SteamOS starts Desktop Mode on Wayland. Use Pocket XR in Gaming Mode: it starts by itself there.": "El modo Escritorio de Pocket XR necesita Plasma en X11, y este SteamOS inicia el modo Escritorio en Wayland. Usa Pocket XR en el modo Juego: allí se inicia solo.",
-  "XR Gaming's driver is running, even with its plugin removed, and it takes the glasses and the game screen. Stop it in Konsole: {command}": "El controlador de XR Gaming sigue en marcha, aunque se haya quitado su plugin, y se queda con las gafas y la pantalla del juego. Detenlo en Konsole: {command}"
+  "XR Gaming's driver is running, even with its plugin removed, and it takes the glasses and the game screen. Stop it in Konsole: {command}": "El controlador de XR Gaming sigue en marcha, aunque se haya quitado su plugin, y se queda con las gafas y la pantalla del juego. Detenlo en Konsole: {command}",
+  "Stop XR Gaming's driver": "Detener el controlador de XR Gaming",
+  "Put the desktop back to Wayland": "Volver a poner el escritorio en Wayland",
+  "Done. XR Gaming's driver is stopped and won't start again. Unplug the glasses and plug them back in.": "Hecho. El controlador de XR Gaming está detenido y no volverá a arrancar. Desconecta las gafas y vuelve a conectarlas.",
+  "Done. It applies the next time you switch to Desktop.": "Hecho. Se aplica la próxima vez que cambies al Escritorio.",
+  "That didn't work: {error}": "No ha funcionado: {error}"
 }

@@ -190,5 +190,10 @@
   "Screen gap": "Bildschirmabstand",
   "The space between screens in Steady mode.": "Der Abstand zwischen den Bildschirmen im Steady-Modus.",
   "Pocket XR's Desktop Mode needs Plasma on X11, and this SteamOS starts Desktop Mode on Wayland. Use Pocket XR in Gaming Mode: it starts by itself there.": "Der Desktop-Modus von Pocket XR braucht Plasma unter X11, und dieses SteamOS startet den Desktop-Modus unter Wayland. Nutze Pocket XR im Spielmodus: Dort startet es von selbst.",
-  "XR Gaming's driver is running, even with its plugin removed, and it takes the glasses and the game screen. Stop it in Konsole: {command}": "Der Treiber von XR Gaming läuft noch, auch wenn sein Plugin entfernt ist, und belegt die Brille und das Spielbild. Beende ihn in Konsole: {command}"
+  "XR Gaming's driver is running, even with its plugin removed, and it takes the glasses and the game screen. Stop it in Konsole: {command}": "Der Treiber von XR Gaming läuft noch, auch wenn sein Plugin entfernt ist, und belegt die Brille und das Spielbild. Beende ihn in Konsole: {command}",
+  "Stop XR Gaming's driver": "Treiber von XR Gaming beenden",
+  "Put the desktop back to Wayland": "Desktop wieder auf Wayland stellen",
+  "Done. XR Gaming's driver is stopped and won't start again. Unplug the glasses and plug them back in.": "Fertig. Der Treiber von XR Gaming ist beendet und startet nicht mehr. Zieh die Brille ab und steck sie wieder an.",
+  "Done. It applies the next time you switch to Desktop.": "Fertig. Es gilt ab dem nächsten Wechsel in den Desktop-Modus.",
+  "That didn't work: {error}": "Das hat nicht geklappt: {error}"
 }

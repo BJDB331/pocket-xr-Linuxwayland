@@ -109,11 +109,14 @@ class Gaming:
         self.lock = threading.Lock()
         self.head_log_until = 0.0
         self.head_logged = 0.0
-        self.other_driver = []  # XR Gaming's driver, looked for every few seconds while glasses are in
+        self.other_driver = []  # XR Gaming's driver, looked for every few seconds
+        self.xr_gaming_enabled = False
+        self.session = None  # SteamOS's default Desktop Mode session
         self.other_checked = 0.0
         self.buttons = DeckButtons(self._button, log=log)
         self.buttons.start()
         threading.Thread(target=self._control_server, name="control", daemon=True).start()
+        threading.Thread(target=self._watch_other, name="other-driver", daemon=True).start()
 
     # ---- the Quick Access panel ----
     def status(self):
@@ -127,13 +130,54 @@ class Gaming:
             "size": float(self.settings.get("size", 0.8)),
             "lang": i18n.lang(),  # the Quick Access panel speaks the same language
             "notice": gmod.xr_gaming_text() if (self.glasses and self.other_driver) else "",
+            # Buttons the panel shows only when they would do something: [{"op", "label"}]
+            "actions": self._actions(),
         }
 
+    def _actions(self):
+        out = []
+        if self.other_driver or self.xr_gaming_enabled:
+            out.append({"op": "stop_xr_gaming", "label": i18n.tr("Stop XR Gaming's driver")})
+        if self.session == gmod.X11_SESSION:
+            out.append({"op": "wayland_back", "label": i18n.tr("Put the desktop back to Wayland")})
+        return out
+
+    def _do_action(self, op):
+        """Runs a panel button's command: the text the panel shows after it."""
+        if op == "stop_xr_gaming":
+            ok, out = gmod.stop_xr_gaming()
+            self.log(f"gaming: stop XR Gaming's driver ({gmod.XR_GAMING_STOP}): {'done' if ok else 'failed'}"
+                     + (f": {out}" if out else ""))
+            self._check_other_driver(time.monotonic())
+            if ok:
+                return i18n.tr("Done. XR Gaming's driver is stopped and won't start again. Unplug the glasses "
+                               "and plug them back in.")
+        elif op == "wayland_back":
+            ok, out = gmod.wayland_back()
+            self.log(f"gaming: desktop session set to {gmod.WAYLAND_SESSION}: {'done' if ok else 'failed'}"
+                     + (f": {out}" if out else ""))
+            self._check_other_driver(time.monotonic())
+            if ok:
+                return i18n.tr("Done. It applies the next time you switch to Desktop.")
+        else:
+            return ""
+        return i18n.tr("That didn't work: {error}", error=(out or "?").splitlines()[-1][:200])
+
+    def _watch_other(self):
+        """Every 5 s, off the head-update loop: XR Gaming's driver and SteamOS's desktop session (commands that take
+        a moment)."""
+        while True:
+            try:
+                self._check_other_driver(time.monotonic())
+            except Exception as e:  # noqa: BLE001
+                self.log(f"gaming: checking for XR Gaming failed ({e})")
+            time.sleep(5.0)
+
     def _check_other_driver(self, now):
-        if now - self.other_checked < 5.0:
-            return
         self.other_checked = now
-        found = gmod.xr_gaming_running() if self.glasses else []
+        found = gmod.xr_gaming_running()
+        self.xr_gaming_enabled = bool(gmod.xr_gaming_installed()) and gmod.xr_gaming_enabled()
+        self.session = gmod.desktop_session() if shutil.which("steamosctl") else None
         if found != self.other_driver:
             if found:
                 self.log("gaming: XR Gaming's driver is running (" +
@@ -153,6 +197,8 @@ class Gaming:
             except OSError as e:
                 self.log(f"gaming: could not make the logs ({e})")
                 return dict(self.status(), logs_error=str(e))
+        if op in ("stop_xr_gaming", "wayland_back"):  # commands that take a moment: not under the lock
+            return dict(self.status(), action_result=self._do_action(op))
         with self.lock:
             if op == "set_mode" and req.get("mode") in ("space", "steady", "off"):
                 self.settings["mode"] = req["mode"]
@@ -405,7 +451,6 @@ class Gaming:
                         if self.reshade is None:
                             self._connect_gamescope()
                         self._check_glasses()
-                        self._check_other_driver(now)
                         self._log_head(now)
                         if self.glasses and self.reshade and not self.effect_on and self.mode() == "space":
                             self._effect(True)

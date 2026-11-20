@@ -16,6 +16,12 @@
 - **Desktop Mode on Wayland:** the message and the README no longer suggest switching SteamOS's desktop to X11. A
   tester's Deck had trouble after that switch. They point to Gaming Mode, and the README gives the command that puts
   Wayland back: `steamosctl set-default-desktop-session plasma.desktop`.
+- **Two buttons in Quick Access**, shown only when they apply, with no terminal or password:
+  - **Stop XR Gaming's driver** runs `systemctl --user disable --now xr-driver` when XR Gaming's driver is running
+    or set to start.
+  - **Put the desktop back to Wayland** runs `steamosctl set-default-desktop-session plasma.desktop` when Desktop
+    Mode is set to X11. It applies the next time you switch to Desktop.
+  - Both say in the panel whether they worked, and log it. Checked on a Deck with a stand-in for XR Gaming's service.
 - **Quick Access panel:** its version now follows Pocket XR's, so the installer offers the new panel when it changes.
 
 Thanks to Pierre Zammit for testing 0.6.1 and sending logs, which led to these changes.
