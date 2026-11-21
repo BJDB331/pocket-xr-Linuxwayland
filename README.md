@@ -93,7 +93,7 @@ picture, your games and Steam's menus, as a big screen held still in front of yo
   as you lean and move around, in 6DoF.
 - **Off**: the picture as it is, moving with your head.
 
-Change them in **Quick Access, Decky, Pocket XR**, which also has the screen's **size** and **Recentre**. Without
+Change them in **Quick Access, Decky, Pocket XR**, which also has the screen's **size**, its **curve** and **Recentre**. Without
 Decky, use the back buttons: **hold L4** to recentre, **hold R4** to switch between the screen in space and Steady
 (or off, on glasses without Steady). A quick tap still reaches your game.
 

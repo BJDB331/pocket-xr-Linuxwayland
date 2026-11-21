@@ -15,6 +15,7 @@ export type Words = {
   view: string;
   screen: string;
   size: string;
+  curve: string;
   recentre: string;
   buttons: string;
   sendLogs: string;
@@ -40,6 +41,7 @@ export const WORDS: Record<string, Words> = {
     view: "View",
     screen: "Screen",
     size: "Size",
+    curve: "Curve",
     recentre: "Recentre",
     buttons: "Without this menu: hold L4 to recentre, hold R4 to switch view.",
     sendLogs: "Send logs to Mike",
@@ -65,6 +67,7 @@ export const WORDS: Record<string, Words> = {
     view: "보기",
     screen: "화면",
     size: "크기",
+    curve: "곡률",
     recentre: "가운데로",
     buttons: "메뉴 없이: L4를 길게 누르면 가운데로, R4를 길게 누르면 보기를 바꿔요.",
     sendLogs: "Mike에게 로그 보내기",
@@ -90,6 +93,7 @@ export const WORDS: Record<string, Words> = {
     view: "ビュー",
     screen: "画面",
     size: "サイズ",
+    curve: "カーブ",
     recentre: "正面に戻す",
     buttons: "メニューなしで：L4 長押しで正面に戻す、R4 長押しでビュー切り替え。",
     sendLogs: "Mike にログを送る",
@@ -115,6 +119,7 @@ export const WORDS: Record<string, Words> = {
     view: "视图",
     screen: "屏幕",
     size: "大小",
+    curve: "弧度",
     recentre: "回到正前方",
     buttons: "不用菜单：按住 L4 回到正前方，按住 R4 切换视图。",
     sendLogs: "把日志发给 Mike",
@@ -138,6 +143,7 @@ export const WORDS: Record<string, Words> = {
     view: "檢視",
     screen: "螢幕",
     size: "大小",
+    curve: "弧度",
     recentre: "回到正前方",
     buttons: "不用選單：按住 L4 回到正前方，按住 R4 切換檢視。",
     sendLogs: "把記錄檔傳給 Mike",
@@ -161,6 +167,7 @@ export const WORDS: Record<string, Words> = {
     view: "Vista",
     screen: "Pantalla",
     size: "Tamaño",
+    curve: "Curva",
     recentre: "Centrar",
     buttons: "Sin este menú: mantén L4 para centrar y R4 para cambiar de vista.",
     sendLogs: "Enviar registros a Mike",
@@ -186,6 +193,7 @@ export const WORDS: Record<string, Words> = {
     view: "Visão",
     screen: "Tela",
     size: "Tamanho",
+    curve: "Curvatura",
     recentre: "Centralizar",
     buttons: "Sem este menu: segure L4 para centralizar e R4 para trocar a visão.",
     sendLogs: "Enviar logs para o Mike",
@@ -211,6 +219,7 @@ export const WORDS: Record<string, Words> = {
     view: "Vue",
     screen: "Écran",
     size: "Taille",
+    curve: "Courbure",
     recentre: "Recentrer",
     buttons: "Sans ce menu : maintenez L4 pour recentrer, R4 pour changer de vue.",
     sendLogs: "Envoyer les journaux à Mike",
@@ -236,6 +245,7 @@ export const WORDS: Record<string, Words> = {
     view: "Ansicht",
     screen: "Bildschirm",
     size: "Größe",
+    curve: "Krümmung",
     recentre: "Zentrieren",
     buttons: "Ohne dieses Menü: L4 halten zum Zentrieren, R4 halten zum Wechseln der Ansicht.",
     sendLogs: "Logs an Mike senden",
@@ -261,6 +271,7 @@ export const WORDS: Record<string, Words> = {
     view: "Vista",
     screen: "Schermo",
     size: "Dimensione",
+    curve: "Curvatura",
     recentre: "Ricentra",
     buttons: "Senza questo menu: tieni premuto L4 per ricentrare, R4 per cambiare vista.",
     sendLogs: "Invia i log a Mike",
@@ -285,6 +296,7 @@ export const WORDS: Record<string, Words> = {
     view: "Вид",
     screen: "Экран",
     size: "Размер",
+    curve: "Изгиб",
     recentre: "По центру",
     buttons: "Без этого меню: удерживайте L4, чтобы вернуть по центру, R4, чтобы сменить вид.",
     sendLogs: "Отправить логи Майку",
