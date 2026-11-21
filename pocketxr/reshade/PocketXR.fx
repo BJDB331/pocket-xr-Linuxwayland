@@ -16,6 +16,7 @@ uniform float4 pxr_quat < source = "pxr_quat"; >;
 // x, y: tangents of half the glasses' picture across and up. z, w: tangents of half the screen across and up.
 uniform float4 pxr_view < source = "pxr_view"; >;
 // x: 1 to draw the screen in space, 0 to pass the picture through as it is. y: soft edge, in screen widths.
+// z: curve, 0 flat to 1 (the screen bent round the eye, every part of it as far away as the middle).
 uniform float4 pxr_mode < source = "pxr_mode"; >;
 // Keeps gamescope painting every frame, so the screen stays put as the head turns over a still game.
 uniform bool pxr_always_paint < source = "gamescope_always_paint"; >;
@@ -44,9 +45,27 @@ float4 PxrPS(float4 position : SV_Position, float2 texcoord : TEXCOORD) : SV_Tar
     if (room.z > -0.05)
         return float4(0.0, 0.0, 0.0, 1.0);
 
-    // Where it meets the screen, straight ahead of the recentred forward.
-    float2 onScreen = room.xy / -room.z;
-    float2 uv = float2(0.5 + onScreen.x / (2.0 * pxr_view.z), 0.5 - onScreen.y / (2.0 * pxr_view.w));
+    // Where it meets the screen, straight ahead of the recentred forward, its middle 1 away.
+    float2 uv;
+    float bend = pxr_mode.z;
+    if (bend < 0.001)
+    {
+        float2 onScreen = room.xy / -room.z;
+        uv = float2(0.5 + onScreen.x / (2.0 * pxr_view.z), 0.5 - onScreen.y / (2.0 * pxr_view.w));
+    }
+    else
+    {
+        // Curved: part of an upright cylinder of radius 1 / bend, its middle where the flat screen's is, bent
+        // towards the eye. The screen keeps its width along the curve, and stays straight up and down.
+        float r = 1.0 / bend;
+        float cz = r - 1.0;            // the cylinder's axis, at z = cz (behind the eye for bend < 1)
+        float a = room.x * room.x + room.z * room.z;
+        float b = room.z * cz;         // the eye is inside the cylinder: one meeting point ahead
+        float t = (b + sqrt(max(b * b - a * (cz * cz - r * r), 0.0))) / max(a, 0.000001);
+        float3 hit = room * t;
+        float across = atan2(hit.x, cz - hit.z) * r;
+        uv = float2(0.5 + across / (2.0 * pxr_view.z), 0.5 - hit.y / (2.0 * pxr_view.w));
+    }
     if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0)
         return float4(0.0, 0.0, 0.0, 1.0);
 

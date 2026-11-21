@@ -1,5 +1,12 @@
 # Changes
 
+## Unreleased
+
+- **Gaming Mode: a curved screen.** Quick Access, Decky, Pocket XR has a **Curve** slider under Size, from 0 % (flat,
+  as before) to 100 % (bent round you, every part as far away as the middle). The screen keeps its width along the
+  curve. It's remembered, and is off by default. Asked for by Pierre Zammit. Not yet tried on a Deck or with
+  glasses; the shader's curve has only been checked by a test that redoes its sums.
+
 ## 0.6.2 (20 Nov 2026)
 
 - **XREAL XBX A01 and A01+:** with 0.6.1 an A01+ sent motion after the controller's heartbeat (522 reports a second),

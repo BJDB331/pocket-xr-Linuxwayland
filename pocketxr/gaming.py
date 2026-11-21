@@ -38,13 +38,23 @@ RAW_IMU = os.path.expanduser("~/.local/state/pocket-xr-deck/imu-raw.log")  # the
 HEAD_LOG_S = 60.0  # the head's direction goes in the log once a second this long after glasses, a mode or a recentre
 FOV_V_DEG = 38.0  # the glasses' picture, vertical (as the desktop app)
 ASPECT = 16 / 9
-DEFAULTS = {"mode": "space", "size": 0.8}
+DEFAULTS = {"mode": "space", "size": 0.8, "curve": 0.0}
 # The Quick Access panel (decky/ plugin) talks to the service here: one JSON request per line, one JSON answer per line
 CONTROL_SOCKET = os.path.join(os.environ.get("XDG_RUNTIME_DIR") or f"/run/user/{os.getuid()}", "pocket-xr-gaming.sock")
 SEND_HZ = 500  # how often the loop looks; updates go out as fast as gamescope takes them (paced)
 PREDICT_S = 0.020  # head prediction: gamescope's composite and the glasses' display
 GONE_GRACE_S = 12.0
 EDGE = 0.004  # the screen's soft edge, in screen widths
+CURVE_MAX = 1.0  # the screen bent round the eye (PocketXR.fx)
+
+
+def curve_of(value):
+    """A curve the effect takes: 0 (flat) to CURVE_MAX; anything else is flat."""
+    try:
+        c = float(value)
+    except (TypeError, ValueError):
+        return 0.0
+    return max(0.0, min(CURVE_MAX, c)) if c == c else 0.0
 
 
 def _log_to_file():
@@ -128,6 +138,7 @@ class Gaming:
             "mode": self.mode() if self.glasses else self.settings.get("mode", "space"),
             "chosen": self.settings.get("mode", "space"),
             "size": float(self.settings.get("size", 0.8)),
+            "curve": curve_of(self.settings.get("curve", 0.0)),
             "lang": i18n.lang(),  # the Quick Access panel speaks the same language
             "notice": gmod.xr_gaming_text() if (self.glasses and self.other_driver) else "",
             # Buttons the panel shows only when they would do something: [{"op", "label"}]
@@ -211,6 +222,15 @@ class Gaming:
                 if self.reshade is not None:
                     try:
                         self._send_view()
+                    except OSError as e:
+                        self._lost_gamescope(e)
+            elif op == "set_curve":
+                self.settings["curve"] = curve_of(req.get("curve", 0.0))
+                save_settings(self.settings)
+                self.log(f"gaming: curve {self.settings['curve']:.2f} (Quick Access)")
+                if self.reshade is not None:
+                    try:
+                        self._send_mode()
                     except OSError as e:
                         self._lost_gamescope(e)
             elif op == "recentre":
@@ -319,7 +339,7 @@ class Gaming:
         try:
             if on and not self.effect_on:
                 self._send_view()
-                self.reshade.set_floats("pxr_mode", (1.0, EDGE, 0.0, 0.0))
+                self._send_mode()
                 self.reshade.enable()
                 self.effect_on = True
                 self.log("gaming: screen in space on")
@@ -329,6 +349,9 @@ class Gaming:
                 self.log("gaming: screen in space off")
         except OSError as e:
             self._lost_gamescope(e)
+
+    def _send_mode(self, r=None):
+        (r or self.reshade).set_floats("pxr_mode", (1.0, EDGE, curve_of(self.settings.get("curve", 0.0)), 0.0))
 
     def _send_view(self):
         tv = math.tan(math.radians(FOV_V_DEG) / 2)
@@ -348,7 +371,7 @@ class Gaming:
         install_effect(self.log)
         r.set_effect(EFFECT)
         r.set_floats("pxr_quat", (0.0, 0.0, 0.0, 1.0))
-        r.set_floats("pxr_mode", (1.0, EDGE, 0.0, 0.0))
+        self._send_mode(r)
         self.reshade = r
         self.effect_on = False
         self._send_view()

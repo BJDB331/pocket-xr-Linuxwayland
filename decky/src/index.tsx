@@ -16,6 +16,7 @@ type Status = {
   mode?: string;
   chosen?: string;
   size?: number;
+  curve?: number;
   lang?: string;
   logs?: string;
   logs_error?: string;
@@ -37,6 +38,7 @@ function statusLine(st: Status | null, w: Words): string {
 function Content() {
   const [st, setSt] = useState<Status | null>(null);
   const [size, setSize] = useState<number | null>(null);
+  const [curve, setCurve] = useState<number | null>(null);
   const [logs, setLogs] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
 
@@ -69,6 +71,7 @@ function Content() {
     else setLogs(fill(w.logsFailed, { error: r.logs_error || r.why || "?" }));
   };
   const shownSize = size ?? Math.round((st?.size ?? 0.8) * 100);
+  const shownCurve = curve ?? Math.round((st?.curve ?? 0) * 100);
   const act = async (op: string) => {
     setDone(null);
     const r = await request({ op });
@@ -126,6 +129,22 @@ function Content() {
             onChange={(v: number) => {
               setSize(v);
               send({ op: "set_size", size: v / 100 });
+            }}
+          />
+        </PanelSectionRow>
+        <PanelSectionRow>
+          <SliderField
+            label={w.curve}
+            value={shownCurve}
+            min={0}
+            max={100}
+            step={10}
+            showValue
+            valueSuffix="%"
+            disabled={!ready || st?.mode !== "space"}
+            onChange={(v: number) => {
+              setCurve(v);
+              send({ op: "set_curve", curve: v / 100 });
             }}
           />
         </PanelSectionRow>
