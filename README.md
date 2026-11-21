@@ -37,7 +37,8 @@ switched, this in Konsole puts Wayland back, from the next time you switch to De
 `steamosctl set-default-desktop-session plasma.desktop` (or press **Put the desktop back to Wayland** in Quick
 Access). Your Deck on your phone (below) needs Wayland.
 
-Not on SteamOS? On a Wayland desktop (the default on CachyOS, Bazzite and others) log out and pick **Plasma (X11)**, or use Gaming Mode. If a back button also opens your
+Not on SteamOS? See [Ubuntu and other Linux](#ubuntu-and-other-linux). On a Plasma Wayland desktop (the default on
+CachyOS, Bazzite and others) log out and pick **Plasma (X11)**, or use Gaming Mode. If a back button also opens your
 desktop's own menu, your system has mapped that button too: clear it in Steam's desktop controller layout or your
 handheld tool (like HHD or InputPlumber).
 
@@ -50,6 +51,27 @@ https://github.com/pocket-xr/pocket-xr-deck/releases/latest/download/pocket-xr-d
 ```
 
 To remove it: `~/.local/share/pocket-xr-deck/uninstall.sh`
+
+### Ubuntu and other Linux
+
+New and not yet tried with glasses: Pocket XR also runs on Ubuntu 24.04 and 26.04, on GNOME's usual Wayland desktop
+and on X11. Install it with the same line, in a terminal. Off SteamOS the installer also:
+
+- offers the few system pieces Ubuntu leaves out (Python's Tk for the panel, and SDL2 on a minimal install), with
+  your password;
+- offers a USB permission so head tracking can read XREAL Air and VITURE glasses (the XREAL Aura doesn't need it);
+- on GNOME, adds shortcuts for the Deck's back buttons: **Super+Alt+R** recentres, **Super+Alt+V** switches Window in
+  space and Steady 6DoF, **Super+Alt+L** opens the launcher, **Super+Alt+C** the Control Center.
+
+What you get:
+
+- **GNOME on Wayland** (Ubuntu's default): your main screen in the glasses, held still in space. App windows each in
+  their own place aren't there yet; choosing them shows the main screen. GNOME shows its screen sharing icon while
+  Pocket XR runs: that's how Pocket XR sees the screen.
+- **X11** (Ubuntu 24.04's "Ubuntu on Xorg", Plasma (X11)): the same as on the Deck, app windows included.
+- Plasma on Wayland and other Wayland desktops: not yet.
+
+Gaming Mode, Quick Access and the back buttons are the Deck's own. What was checked and how: `docs/UBUNTU.md`.
 
 ## Use
 

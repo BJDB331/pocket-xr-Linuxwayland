@@ -19,6 +19,8 @@ import os
 import threading
 import time
 
+from .panels import Frame, Panel  # noqa: F401  (kept here for older imports)
+
 x11 = ctypes.CDLL(ctypes.util.find_library("X11") or "libX11.so.6")
 xc = ctypes.CDLL(ctypes.util.find_library("Xcomposite") or "libXcomposite.so.1")
 xf = ctypes.CDLL(ctypes.util.find_library("Xfixes") or "libXfixes.so.3")
@@ -154,31 +156,7 @@ ALL_PLANES = 0xFFFFFFFF
 IS_VIEWABLE = 2
 # A window this app or its panel shows is never captured.
 OWN_TITLES = ("Pocket XR Deck", "Pocket XR")
-SKIP_CLASSES = ("plasmashell", "krunner", "steamwebhelper-notification")
-
-
-class Frame:
-    """One picture: BGRA bytes, width, height, and a number that changes with each new picture."""
-    __slots__ = ("data", "w", "h", "serial")
-
-    def __init__(self, data, w, h, serial):
-        self.data, self.w, self.h, self.serial = data, w, h, serial
-
-
-class Panel:
-    """A thing shown in space: the Deck's screen, or one app window."""
-
-    def __init__(self, key, title):
-        self.key = key  # "deck" or the X client window id
-        self.title = title
-        self.frame = None
-        self.root_x = self.root_y = 0  # where its picture's top left is on the X screen
-        self.w = self.h = 0
-        self.pointer = None  # (x, y) in its picture, when the pointer is on it and nothing covers it there
-        self.active = False
-        self.frame_win = None  # KWin's frame around it, found with the list
-        self.cls = ""  # the app's WM_CLASS class, to keep its place across runs
-        self.first_seen = time.monotonic()
+SKIP_CLASSES = ("plasmashell", "krunner", "steamwebhelper-notification", "gnome-shell")
 
 
 class XCapture(threading.Thread):
@@ -367,7 +345,8 @@ class XCapture(threading.Thread):
             "_NET_CLIENT_LIST", "_NET_ACTIVE_WINDOW", "_NET_WM_NAME", "UTF8_STRING", "WM_NAME", "_NET_WM_PID",
             "_NET_WM_WINDOW_TYPE", "_NET_WM_WINDOW_TYPE_NORMAL", "_NET_WM_WINDOW_TYPE_DIALOG", "_NET_WM_STATE",
             "_NET_WM_STATE_HIDDEN", "_NET_WM_STATE_SKIP_TASKBAR", "WM_CLASS", "_NET_CLIENT_LIST_STACKING",
-            "_NET_MOVERESIZE_WINDOW", "_NET_RESTACK_WINDOW", "_NET_CLOSE_WINDOW", "_NET_WM_STATE_MAXIMIZED_VERT", "_NET_WM_STATE_MAXIMIZED_HORZ")}
+            "_NET_MOVERESIZE_WINDOW", "_NET_RESTACK_WINDOW", "_NET_CLOSE_WINDOW", "_NET_WM_STATE_MAXIMIZED_VERT", "_NET_WM_STATE_MAXIMIZED_HORZ",
+            "_GTK_FRAME_EXTENTS")}
         last_list = 0.0
         while not self.stop:
             now = time.monotonic()
@@ -384,8 +363,8 @@ class XCapture(threading.Thread):
                     p = self._panels.get(w)
                     g = self.glasses_rect
                     if p is not None and g is not None:
-                        fx, fy = self._origin(p.frame_win) if p.frame_win else (g[0], g[1])
-                        self._move_resize(w, g[0], g[1], min(cw, g[2]), min(ch, g[3]))
+                        l, r, t, b = p.shadow
+                        self._move_resize(w, g[0] - l, g[1] - t, min(cw, g[2]) + l + r, min(ch, g[3]) + t + b)
                         x11.XFlush(self.dpy)
                 elif kind == "close" and isinstance(key, int):
                     self._client_message(key, "_NET_CLOSE_WINDOW", [0, 2, 0, 0, 0])
@@ -466,6 +445,12 @@ class XCapture(threading.Thread):
         x11.XTranslateCoordinates(self.dpy, w, self.root, 0, 0, ctypes.byref(x), ctypes.byref(y), ctypes.byref(child))
         return x.value, y.value
 
+    def _shadow(self, w):
+        """The invisible margin round a window that draws its own title bar and shadow (GTK 3 and 4, as GNOME's own
+        apps do): (left, right, top, bottom) from _GTK_FRAME_EXTENTS, or zeros. Not part of the app's picture."""
+        e = self._longs(w, "_GTK_FRAME_EXTENTS")
+        return tuple(int(v) for v in e[:4]) if len(e) >= 4 else (0, 0, 0, 0)
+
     def _is_app(self, w):
         types = self._longs(w, "_NET_WM_WINDOW_TYPE")
         if types and not ({self.atoms["_NET_WM_WINDOW_TYPE_NORMAL"], self.atoms["_NET_WM_WINDOW_TYPE_DIALOG"]} & set(types)):
@@ -521,6 +506,13 @@ class XCapture(threading.Thread):
                     p.cls = raw.split("\0")[1] if "\0" in raw and len(raw.split("\0")) > 1 else raw
                 p.root_x, p.root_y = self._origin(w)
                 p.w, p.h = a.width, a.height
+                l, r, t, b = self._shadow(w)
+                if (l or r or t or b) and p.w > l + r + 32 and p.h > t + b + 32:
+                    # Only the window itself, not its shadow (seen with GNOME's Text Editor on Mutter's X11).
+                    p.root_x, p.root_y, p.w, p.h = p.root_x + l, p.root_y + t, p.w - l - r, p.h - t - b
+                    p.shadow = (l, r, t, b)
+                else:
+                    p.shadow = (0, 0, 0, 0)
                 p.active = w == active
                 fw = self._frame_of(w)
                 if fw and fw not in self._redirected:
@@ -570,21 +562,26 @@ class XCapture(threading.Thread):
         g = self.glasses_rect
         fa = self._attrs(p.frame_win) if p.frame_win else None
         fx, fy = self._origin(p.frame_win) if p.frame_win else (p.root_x, p.root_y)
-        deco_w = (fa.width - p.w) if fa else 0
-        deco_h = (fa.height - p.h) if fa else 0
+        l, r, t, b = p.shadow
+        cw0, ch0 = p.w + l + r, p.h + t + b  # the X window's own size, shadow and all
+        deco_w = (fa.width - cw0) if fa else 0
+        deco_h = (fa.height - ch0) if fa else 0
         state = set(self._longs(w, "_NET_WM_STATE"))
         was_max = self.atoms["_NET_WM_STATE_MAXIMIZED_VERT"] in state
         if g[0] <= fx + 10 < g[0] + g[2] and g[1] <= fy + 10 < g[1] + g[3]:
             # Already on the glasses' output (left there before): its home is the Deck's screen, at a size that fits.
             dx, dy, dw, dh = self.deck_rect
             cw, ch = min(p.w, dw - deco_w - 40), min(p.h, dh - deco_h - 40)
-            self._placed[w] = (dx + (dw - cw - deco_w) // 2, dy + (dh - ch - deco_h) // 2, cw, ch, was_max)
+            self._placed[w] = (dx + (dw - cw - deco_w) // 2 - l, dy + (dh - ch - deco_h) // 2 - t, cw + l + r,
+                               ch + t + b, was_max)
         else:
-            self._placed[w] = (fx, fy, p.w, p.h, was_max)
+            self._placed[w] = (fx, fy, cw0, ch0, was_max)
         sw, sh = min(APP_SCREEN[0], g[2]), min(APP_SCREEN[1], g[3])
         if was_max:
             self._maximize(w, False)
-        self._move_resize(w, g[0] + (g[2] - sw) // 2, g[1] + (g[3] - sh) // 2, sw - deco_w, sh - deco_h)
+        # The visible window fills the screen; its shadow, if it has one, lies outside it.
+        self._move_resize(w, g[0] + (g[2] - sw) // 2 - l, g[1] + (g[3] - sh) // 2 - t, sw - deco_w + l + r,
+                          sh - deco_h + t + b)
         x11.XFlush(self.dpy)
         self.restored = False
         self.log(f"capture: '{p.title}' gets its own {sw}x{sh} screen")

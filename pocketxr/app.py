@@ -17,7 +17,7 @@ import sys
 import threading
 import time
 
-from . import fusion, glasses as gmod, hidimu, imu, readability
+from . import fusion, glasses as gmod, hidimu, imu, readability, remote, session
 from .deckpad import DeckButtons
 from .gl import (GL_BGRA, GL_BLEND, GL_CLAMP_TO_EDGE, GL_COLOR_BUFFER_BIT, GL_LINEAR, GL_LINE_LOOP, GL_MODELVIEW,
                  GL_ONE_MINUS_SRC_ALPHA, GL_PROJECTION, GL_QUADS, GL_RGBA, GL_SRC_ALPHA, GL_TEXTURE_2D,
@@ -34,7 +34,6 @@ from .recorder import Recorder
 from .settingsctl import SettingsControl
 from .space import STEADY_GAP_DEFAULT_PX, STEADY_GAP_STEP_PX, Pose, flat_layout, steady_gap_px
 from .spaceview import SpaceView
-from .xcapture import XCapture
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 CONFIG = os.path.join(os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config")), "pocket-xr-deck")
@@ -112,19 +111,9 @@ def notify(text):
         pass
 
 
-def wayland_session():
-    """True in a Wayland desktop session, where Desktop Mode's X11 window moving can't work.
-    POCKETXR_ALLOW_WAYLAND=1 starts it anyway (for testing)."""
-    if os.environ.get("POCKETXR_ALLOW_WAYLAND") == "1":
-        return False
-    kind = os.environ.get("XDG_SESSION_TYPE", "")
-    # SteamOS's X11 desktop says x11; a stray WAYLAND_DISPLAY there (from Gaming Mode) must not stop it.
-    return kind == "wayland" or (kind != "x11" and bool(os.environ.get("WAYLAND_DISPLAY")))
-
-
 def steamos():
     """SteamOS, where steamosctl picks Desktop Mode's session."""
-    return bool(shutil.which("steamosctl"))
+    return session.steamos()
 
 
 def steamos_wayland_text():
@@ -171,12 +160,14 @@ class App:
             notify(tr("Pocket XR is already running."))
             return 0
         self.log(f"Pocket XR for Steam Deck starting, settings {self.settings}")
-        if wayland_session():
-            # Desktop Mode moves app windows, the pointer and the view with X11. A Wayland desktop doesn't let X11
-            # apps do that (a tester on CachyOS's Wayland desktop lost control of the Deck and had to hard restart).
-            # Say so and stop instead. SteamOS 3.9 starts Desktop Mode on Wayland by default (a Deck on 3.9.5,
-            # 20 Nov 2026: steamosctl get-default-desktop-session gave plasma.desktop; plasmax11.desktop is the other
-            # choice), and Desktop Mode is entered from Gaming Mode, so there the way to X11 is steamosctl.
+        self.backend = session.backend()
+        if self.backend is None:
+            # X11 apps can't move app windows, the pointer or the view on a Wayland desktop (a tester on CachyOS's
+            # Wayland desktop lost control of the Deck and had to hard restart), and only GNOME's Wayland desktop has
+            # the screen cast and input Pocket XR uses there (mutter.py). Say so and stop instead. SteamOS 3.9 starts
+            # Desktop Mode on Wayland by default (a Deck on 3.9.5, 20 Nov 2026: steamosctl get-default-desktop-session
+            # gave plasma.desktop; plasmax11.desktop is the other choice), and Desktop Mode is entered from Gaming
+            # Mode, so there the way to X11 is steamosctl.
             text = steamos_wayland_text() if steamos() else tr(
                 "Pocket XR's Desktop Mode needs a Plasma (X11) session. Wayland isn't supported yet. "
                 "Log out and pick Plasma (X11), or use Gaming Mode.")
@@ -185,27 +176,48 @@ class App:
             notify(text)
             print(text, file=sys.stderr)
             return 1
+        self.log(f"desktop: {session.desktop() or 'other'} on {session.session_type() or 'unknown'}, "
+                 f"{'SteamOS' if steamos() else 'not SteamOS'}; screen through {self.backend}")
         sdl.SDL_SetHint(b"SDL_VIDEO_MINIMIZE_ON_FOCUS_LOSS", b"0")
         # Only a real close quits: a closing terminal or SSH session must not take the view down.
         sdl.SDL_SetHint(b"SDL_NO_SIGNAL_HANDLERS", b"1")
-        # Xlib from several threads (SDL here, the capture thread): must come before any other Xlib call.
-        from .xcapture import x11
-        x11.XInitThreads()
+        if self.backend == "mutter":
+            # A Wayland window of its own on the glasses' monitor (not through Xwayland, which would scale it on a
+            # scaled desktop), unless SDL_VIDEODRIVER says otherwise.
+            os.environ.setdefault("SDL_VIDEODRIVER", "wayland,x11")
+            from .mutter import MutterCapture
+            self.capture = MutterCapture(log=self.log)
+            self.capture.source = self.settings["source"]
+            self.capture.start()
+            self.capture.ready.wait(10)
+            if self.capture.failed:
+                self.log("capture through Mutter failed: " + self.capture.failed)
+        else:
+            # Xlib from several threads (SDL here, the capture thread): must come before any other Xlib call.
+            from .xcapture import x11
+            x11.XInitThreads()
         if sdl.SDL_Init(SDL_INIT_VIDEO) != 0:
             self.log("SDL_Init failed: " + sdl.SDL_GetError().decode())
             return 1
-        _, deck = split_displays(displays())
-        deck_rect = (deck[2], deck[3], deck[4], deck[5]) if deck else (0, 0, 1280, 800)
-        self.capture = XCapture(deck_rect, log=self.log)
-        self.capture.source = self.settings["source"]
-        self.capture.install_handler()
-        self.capture.start()
+        self.log(f"view: SDL video driver {sdl.SDL_GetCurrentVideoDriver().decode()}")
+        if self.backend != "mutter":
+            from .xcapture import XCapture
+            _, deck = self._split()
+            deck_rect = (deck[2], deck[3], deck[4], deck[5]) if deck else (0, 0, 1280, 800)
+            self.capture = XCapture(deck_rect, log=self.log)
+            self.capture.source = self.settings["source"]
+            self.capture.install_handler()
+            self.capture.start()
         self.recorder = Recorder(self.log, on_saved=lambda path: self.events.put(("panel", "record_saved", path)))
         # PC screens (pcscreens.py): its thread speaks through the event queue
         self.pcscreens = PcScreens(self.log, say=lambda text: self.events.put(("panel", "pc_screen_say", text)),
                                    opened=lambda slot: self.events.put(("panel", "pc_screen_opened", slot)))
         self.deckpad = DeckButtons(lambda n, k: self.events.put(("button", n, k)), log=self.log)
         self.deckpad.start()
+        # The same buttons from keyboard shortcuts (pocket-xr --button L4 tap), for computers without back buttons.
+        self.remote = remote.Listener(lambda n, k: self.events.put(("button", n, k)), log=self.log)
+        if self.remote.open():
+            self.remote.start()
         self.panel = self._start_panel()
         self.capture.panel_pid = self.panel.pid if self.panel else None
         # Asked to stop (log out, shut down, systemctl): put the glasses back first, as with Quit.
@@ -219,6 +231,9 @@ class App:
                 time.sleep(0.05)
         finally:
             self._close_window()
+            if hasattr(self.capture, "close"):
+                self.capture.close()
+            self.remote.close()
             if self.reader:
                 self.reader.stop = True
             if self.control:
@@ -233,7 +248,32 @@ class App:
             self.log("bye")
         return 0
 
+    def _split(self):
+        """(the glasses' display, the main screen's) as SDL numbers them: on GNOME on Wayland as Mutter names the
+        monitors (SDL's names there may not say which are glasses), elsewhere from SDL's own names."""
+        found = displays()
+        if self.backend == "mutter":
+            g, main = self.capture.split(found)
+            if g is not None or main is not None:
+                return g, main
+        return split_displays(found)
+
     def _start_panel(self):
+        import importlib.util
+        if importlib.util.find_spec("tkinter") is None:
+            # Ubuntu leaves Python's Tk out (python3-tk); install.sh offers it. Without it there is no panel, but the
+            # view and the glasses still work.
+            self.log("panel: Python's Tk (tkinter) is not installed; no control panel (Ubuntu: sudo apt install python3-tk)")
+            notify("Pocket XR's control panel needs Python's Tk: sudo apt install python3-tk")
+            return None
+        now = time.monotonic()
+        starts = [t for t in getattr(self, "_panel_starts", []) if now - t < 30] + [now]
+        self._panel_starts = starts
+        if len(starts) > 3:
+            # A panel that closes as soon as it opens (no display it can reach, a broken Tk): stop trying.
+            if len(starts) == 4:
+                self.log("panel: closed again straight after starting, 3 times in 30 s; not starting it again")
+            return None
         try:
             p = subprocess.Popen([sys.executable, "-m", "pocketxr.panel", os.path.join(HERE, "..", "assets", "pocket-xr.png")],
                                  cwd=os.path.join(HERE, ".."), stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
@@ -328,6 +368,8 @@ class App:
         ev = (ctypes.c_ubyte * 64)()
         while sdl.SDL_PollEvent(ctypes.byref(ev)):
             etype = int.from_bytes(bytes(ev[0:4]), "little")
+            if DEV and os.environ.get("POCKETXR_LOG_EVENTS") == "1":
+                self.log(f"sdl event 0x{etype:x} {bytes(ev[8:16]).hex()}")
             if etype == SDL_QUIT:
                 self.request_quit("window closed")
             elif etype == SDL_KEYDOWN:
@@ -335,6 +377,8 @@ class App:
                 mod = int.from_bytes(bytes(ev[24:26]), "little")
                 if sym == ord("q") and mod & KMOD_CTRL:
                     self.request_quit("Ctrl+Q")
+            elif etype == 0x400 and hasattr(self.capture, "view_pointer"):  # pointer moved onto the view
+                self.capture.view_pointer()
             elif etype in (0x401, 0x402) and not self.capture.space_pointer:
                 self.log(f"view: a click came while the space pointer is off")
             elif etype in (0x401, 0x402) and self.capture.space_pointer:  # mouse button down / up
@@ -395,7 +439,7 @@ class App:
             if self.glasses is not None and self.glasses.family == "other" and self.window is not None:
                 g = self.glasses
             elif self.window is None:
-                gd, _ = split_displays(displays())
+                gd, _ = self._split()
                 if gd is not None:
                     g = gmod.other_glasses()
                     if "xreal" in gd[1].lower() or "ultra" in gd[1].lower():
@@ -440,7 +484,7 @@ class App:
             self._open_window()
             self.capture.install_handler()
         else:
-            gd, deck = split_displays(displays())
+            gd, deck = self._split()
             if gd is None or (gd[4], gd[5]) != self.win_size:
                 self.log(f"glasses' display changed to {gd[4] if gd else 0}x{gd[5] if gd else 0}; opening the view again")
                 self._close_window()
@@ -449,7 +493,7 @@ class App:
                 self.capture.glasses_rect = (gd[2], gd[3], gd[4], gd[5])
 
     def _open_window(self):
-        gd, deck = split_displays(displays())
+        gd, deck = self._split()
         if gd is None:
             return
         di, name, x, y, w, h = gd
@@ -1094,6 +1138,13 @@ class App:
 
 
 def main():
+    cmd = remote.parse(sys.argv[1:])
+    if cmd is not None:
+        _, name, how = cmd
+        if not remote.send({"button": name, "how": how}):
+            print("Pocket XR is not running.", file=sys.stderr)
+            sys.exit(1)
+        sys.exit(0)
     os.environ.setdefault("DISPLAY", ":0")
     sys.exit(App().run())
 
