@@ -19,6 +19,9 @@ It works in both Desktop Mode and [Gaming Mode](#gaming-mode). It's set up for t
 Pocket XR on Android (see [Glasses](#glasses)). Most haven't been tried on a Deck yet, so if you have any of them,
 please give it a go and send a "works" or "doesn't" with your log: that's the fastest way to make it great on yours.
 
+New in 0.7.0: it also runs on **Ubuntu** 24.04 and 26.04, so far tried only in a test setup, not on a real Ubuntu
+computer or with glasses. See [Ubuntu and other Linux](#ubuntu-and-other-linux).
+
 ## Install
 
 On the Deck, switch to Desktop Mode, open Konsole and paste:
@@ -54,14 +57,35 @@ To remove it: `~/.local/share/pocket-xr-deck/uninstall.sh`
 
 ### Ubuntu and other Linux
 
-New and not yet tried with glasses: Pocket XR also runs on Ubuntu 24.04 and 26.04, on GNOME's usual Wayland desktop
-and on X11. Install it with the same line, in a terminal. Off SteamOS the installer also:
+New in 0.7.0: Pocket XR also runs on Ubuntu 24.04 and 26.04, on GNOME's usual Wayland desktop and on X11.
 
-- offers the few system pieces Ubuntu leaves out (Python's Tk for the panel, and SDL2 on a minimal install), with
-  your password;
-- offers a USB permission so head tracking can read XREAL Air and VITURE glasses (the XREAL Aura doesn't need it);
-- on GNOME, adds shortcuts for the Deck's back buttons: **Super+Alt+R** recentres, **Super+Alt+V** switches Window in
-  space and Steady 6DoF, **Super+Alt+L** opens the launcher, **Super+Alt+C** the Control Center.
+> **Tried only in a test setup so far:** Ubuntu ran in headless GNOME sessions under WSL on a Windows PC, with a
+> second virtual monitor standing in for the glasses. It has not been tried on a real Ubuntu computer or with
+> glasses yet. If you try it, please send a "works" or "doesn't" with your log (Send logs to Mike).
+
+To install, open a terminal (Ctrl+Alt+T) and paste this. Ubuntu has `wget` but not always `curl`:
+
+```bash
+wget -qO- https://github.com/pocket-xr/pocket-xr-deck/releases/latest/download/pocket-xr-deck.tar.gz | tar xz -C /tmp && /tmp/pocket-xr-deck/install.sh
+```
+
+It asks two questions, each answered with Enter (yes) and then your password:
+
+1. **The system pieces Ubuntu leaves out**, if any are missing: Python's Tk for the control panel, and SDL2 on a
+   minimal install (`sudo apt-get install python3-tk libsdl2-2.0-0`).
+2. **The glasses' USB permission**: one udev rule, so head tracking can read XREAL Air and VITURE glasses. The XREAL
+   Aura doesn't need it. If you said no, or want to add it by hand, this is the one sudo step:
+
+   ```bash
+   printf '%s\n' 'KERNEL=="hidraw*", ATTRS{idVendor}=="3318", TAG+="uaccess"' 'KERNEL=="hidraw*", ATTRS{idVendor}=="35ca", TAG+="uaccess"' 'KERNEL=="hidraw*", ATTRS{idVendor}=="057e", TAG+="uaccess"' | sudo tee /etc/udev/rules.d/70-pocket-xr.rules && sudo udevadm control --reload-rules && sudo udevadm trigger --subsystem-match=hidraw
+   ```
+
+   Then unplug the glasses and plug them back in.
+
+Everything else goes in your home folder, as on the Deck. On GNOME the installer also adds shortcuts for the Deck's
+back buttons: **Super+Alt+R** recentres, **Super+Alt+V** switches Window in space and Steady 6DoF, **Super+Alt+L**
+opens the launcher, **Super+Alt+C** the Control Center. Then plug in your glasses and open **Pocket XR** from the app
+menu. Run the same line again to update; `~/.local/share/pocket-xr-deck/uninstall.sh` removes it.
 
 What you get:
 
