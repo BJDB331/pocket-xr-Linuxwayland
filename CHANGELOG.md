@@ -1,6 +1,6 @@
 # Changes
 
-## Not yet released
+## 0.7.0 (21 Nov 2026)
 
 - **Ubuntu.** Pocket XR runs on Ubuntu 24.04 and 26.04 as well as SteamOS. Tried in headless GNOME sessions on a PC
   (WSL), not yet with glasses or on real hardware; what was seen is in `docs/UBUNTU.md`.
