@@ -67,6 +67,11 @@ The control panel:
   - **App windows**: each open app as its own window, side by side around you.
 - **Adjust**: Recentre, Smaller and Bigger, Nearer and Further.
 - **Screen gap**, in Steady 6DoF: the space between screens, 0 to 120 pixels in steps of 10 (40 to start).
+- **Readability**: off to start. On, it shows the Deck screen alone, 30 degrees wide and in front of you, so each
+  of the Deck's 1280 pixels across lands on about one pixel of 1080p glasses and text is sharp. The Deck keeps its
+  own 1280x800 resolution, already lower than the 1440x810 Pocket XR for Mac and Windows use for this. In Steady
+  6DoF the screen is drawn at exactly its own pixels. Off puts back what it changed (Deck screen or App windows, the
+  screen's size and place, Steady's size). Not yet tried with glasses.
 - **Look at a window to bring it to the front.** In App windows, look at a window for a moment and it comes to
   the front on the Deck's screen, so touch, the trackpads and the keyboard work on it.
 - **Record**, in the Control Center and on the control panel: a 1080p video of exactly what you see, PC VR included,
@@ -93,7 +98,8 @@ picture, your games and Steam's menus, as a big screen held still in front of yo
   as you lean and move around, in 6DoF.
 - **Off**: the picture as it is, moving with your head.
 
-Change them in **Quick Access, Decky, Pocket XR**, which also has the screen's **size**, its **curve** and **Recentre**. Without
+Change them in **Quick Access, Decky, Pocket XR**, which also has the screen's **size**, its **curve**, **Readability**
+and **Recentre**. Without
 Decky, use the back buttons: **hold L4** to recentre, **hold R4** to switch between the screen in space and Steady
 (or off, on glasses without Steady). A quick tap still reaches your game.
 
@@ -104,6 +110,9 @@ Good to know:
 - Steam's own overlays, like Quick Access and notifications, stay fixed in front of you rather than on the screen
   in space. That's how gamescope, Steam's Gaming Mode compositor, draws them.
 - App windows all around you are a Desktop Mode feature. In Gaming Mode you get one screen.
+- **Readability** in Gaming Mode makes the screen 30 degrees wide, the sharpest for a game drawn 1280 pixels wide
+  (the Deck's own resolution). It can't make a game's text larger: the game picks its own resolution, so for larger
+  text choose a larger text or interface size in the game. Off puts the size back. Not yet tried with glasses.
 - Unplug the glasses before restarting the Deck. Once, after a restart with the glasses plugged in, the Deck's own
   screen stayed black until a full power-off.
 

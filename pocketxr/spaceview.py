@@ -18,6 +18,7 @@ from . import layouts
 from . import sendlogs
 from . import space as S
 from . import look as L
+from . import readability
 from . import text
 from . import ui
 from .i18n import tr
@@ -159,9 +160,11 @@ class SpaceView:
             if saved and not any(S.overlaps(S.Pose.from_json(saved), o, gap=0) for o in others):
                 pose = S.Pose.from_json(saved)
             else:
-                wdeg = S.DEFAULT_WIDTH_DEG if p.key != "deck" else S.DEFAULT_WIDTH_DEG
+                wdeg = S.DEFAULT_WIDTH_DEG
                 hdeg = S.clamp(S.m_to_deg(S.deg_to_m(wdeg, S.DEFAULT_DISTANCE) * aspect, S.DEFAULT_DISTANCE),
                                S.MIN_SIZE_DEG, S.MAX_HEIGHT_DEG)
+                if p.key == "deck" and self.app.settings.get("readability"):
+                    wdeg, hdeg = readability.deck_size_deg(S.DEFAULT_DISTANCE, (p.frame.w, p.frame.h))
                 yaw, pitch = head_yaw, 0.0
                 if self.pending_spot and now < self.pending_spot[2]:
                     yaw, pitch = self.pending_spot[0], self.pending_spot[1]

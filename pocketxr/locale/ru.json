@@ -195,5 +195,8 @@
   "Put the desktop back to Wayland": "Вернуть рабочий стол на Wayland",
   "Done. XR Gaming's driver is stopped and won't start again. Unplug the glasses and plug them back in.": "Готово. Драйвер XR Gaming остановлен и больше не запустится. Отключите очки и подключите снова.",
   "Done. It applies the next time you switch to Desktop.": "Готово. Это сработает при следующем переходе в режим рабочего стола.",
-  "That didn't work: {error}": "Не получилось: {error}"
+  "That didn't work: {error}": "Не получилось: {error}",
+  "Readability": "Читаемость",
+  "The Deck screen alone, 30 degrees wide: sharper text": "Только экран Deck шириной 30 градусов: текст чётче",
+  "The game screen 30 degrees wide: sharpest for a game drawn 1280 pixels wide. For larger text, pick a larger text or interface size in the game.": "Экран игры шириной 30 градусов: чётче всего для игры, которая рисуется шириной 1280 пикселей. Чтобы текст был крупнее, выберите в игре больший размер текста или интерфейса."
 }

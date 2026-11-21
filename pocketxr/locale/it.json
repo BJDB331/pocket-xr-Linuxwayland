@@ -195,5 +195,8 @@
   "Put the desktop back to Wayland": "Riporta il desktop su Wayland",
   "Done. XR Gaming's driver is stopped and won't start again. Unplug the glasses and plug them back in.": "Fatto. Il driver di XR Gaming è fermo e non ripartirà. Scollega gli occhiali e ricollegali.",
   "Done. It applies the next time you switch to Desktop.": "Fatto. Vale dalla prossima volta che passi al Desktop.",
-  "That didn't work: {error}": "Non ha funzionato: {error}"
+  "That didn't work: {error}": "Non ha funzionato: {error}",
+  "Readability": "Leggibilità",
+  "The Deck screen alone, 30 degrees wide: sharper text": "Solo lo schermo del Deck, largo 30 gradi: testo più nitido",
+  "The game screen 30 degrees wide: sharpest for a game drawn 1280 pixels wide. For larger text, pick a larger text or interface size in the game.": "Lo schermo del gioco largo 30 gradi: il più nitido per un gioco disegnato a 1280 pixel di larghezza. Per un testo più grande, scegli nel gioco una dimensione maggiore per il testo o l'interfaccia."
 }

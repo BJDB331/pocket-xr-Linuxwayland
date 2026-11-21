@@ -25,7 +25,7 @@ import sys
 import threading
 import time
 
-from . import fusion, glasses as gmod, hidimu, imu
+from . import fusion, glasses as gmod, hidimu, imu, readability
 from . import i18n, sendlogs, wlreshade
 from .deckpad import DeckButtons
 from .settingsctl import SettingsControl
@@ -38,7 +38,7 @@ RAW_IMU = os.path.expanduser("~/.local/state/pocket-xr-deck/imu-raw.log")  # the
 HEAD_LOG_S = 60.0  # the head's direction goes in the log once a second this long after glasses, a mode or a recentre
 FOV_V_DEG = 38.0  # the glasses' picture, vertical (as the desktop app)
 ASPECT = 16 / 9
-DEFAULTS = {"mode": "space", "size": 0.8, "curve": 0.0}
+DEFAULTS = {"mode": "space", "size": 0.8, "curve": 0.0, "readability": False, "readability_saved": None}
 # The Quick Access panel (decky/ plugin) talks to the service here: one JSON request per line, one JSON answer per line
 CONTROL_SOCKET = os.path.join(os.environ.get("XDG_RUNTIME_DIR") or f"/run/user/{os.getuid()}", "pocket-xr-gaming.sock")
 SEND_HZ = 500  # how often the loop looks; updates go out as fast as gamescope takes them (paced)
@@ -139,6 +139,10 @@ class Gaming:
             "chosen": self.settings.get("mode", "space"),
             "size": float(self.settings.get("size", 0.8)),
             "curve": curve_of(self.settings.get("curve", 0.0)),
+            "readability": bool(self.settings.get("readability")),
+            "readability_label": i18n.tr("Readability"),
+            "readability_line": i18n.tr("The game screen 30 degrees wide: sharpest for a game drawn 1280 pixels "
+                                        "wide. For larger text, pick a larger text or interface size in the game."),
             "lang": i18n.lang(),  # the Quick Access panel speaks the same language
             "notice": gmod.xr_gaming_text() if (self.glasses and self.other_driver) else "",
             # Buttons the panel shows only when they would do something: [{"op", "label"}]
@@ -224,6 +228,8 @@ class Gaming:
                         self._send_view()
                     except OSError as e:
                         self._lost_gamescope(e)
+            elif op == "set_readability":
+                self._set_readability(bool(req.get("on")))
             elif op == "set_curve":
                 self.settings["curve"] = curve_of(req.get("curve", 0.0))
                 save_settings(self.settings)
@@ -352,6 +358,25 @@ class Gaming:
 
     def _send_mode(self, r=None):
         (r or self.reshade).set_floats("pxr_mode", (1.0, EDGE, curve_of(self.settings.get("curve", 0.0)), 0.0))
+
+    def _set_readability(self, on):
+        """Readability (readability.py): the game screen 30 degrees wide. Off puts the size back."""
+        if on == bool(self.settings.get("readability")):
+            return
+        if on:
+            changes, before, after = readability.gaming_on(self.settings, FOV_V_DEG, ASPECT)
+        else:
+            before = {"size": self.settings.get("size")}
+            changes = readability.gaming_off(self.settings)
+            after = {"size": changes.get("size", before["size"])}
+        self.settings.update(changes)
+        save_settings(self.settings)
+        self.log(f"gaming: readability {'on' if on else 'off'} (Quick Access): before {before}; after {after}")
+        if self.reshade is not None:
+            try:
+                self._send_view()
+            except OSError as e:
+                self._lost_gamescope(e)
 
     def _send_view(self):
         tv = math.tan(math.radians(FOV_V_DEG) / 2)
