@@ -1,6 +1,6 @@
 # Changes
 
-## Not released yet
+## 0.6.4 (21 Nov 2026)
 
 - **Readability**, off by default, the same switch as in Pocket XR for Mac and Windows (from a Mac tester's change:
   one lower-resolution screen shown about 30 degrees wide, for sharp text on 1080p glasses). Not yet tried with
