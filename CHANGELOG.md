@@ -1,5 +1,21 @@
 # Changes
 
+## Not yet released
+
+- **Ubuntu.** Pocket XR runs on Ubuntu 24.04 and 26.04 as well as SteamOS. Tried in headless GNOME sessions on a PC
+  (WSL), not yet with glasses or on real hardware; what was seen is in `docs/UBUNTU.md`.
+  - **GNOME on Wayland** (Ubuntu's default, its only GNOME session from 25.10): the main screen in the glasses,
+    through GNOME's own screen cast and remote desktop interfaces and a new native helper, `pxr-mutter`. No dialog;
+    GNOME shows its screen sharing icon. App windows each in their own place need X11 for now.
+  - **X11 with GNOME's window manager** (Ubuntu on Xorg): GNOME's own apps draw a shadow inside their window; app
+    windows are now shown and sized without it.
+  - **Installer**, off SteamOS: offers the missing system pieces (Python's Tk, SDL2) and a USB permission for the
+    Air family's and VITURE's head tracking, both with your password; on GNOME adds shortcuts for the Deck's back
+    buttons (Super+Alt+R, V, L, C). Gaming Mode, Decky and the Deck-on-your-phone host stay SteamOS (and Plasma) only.
+  - `pocket-xr --button L4 tap` (and the other buttons) works the running app from a shortcut.
+  - The panel is not started again and again when it can't open, and a missing library is named instead of a
+    traceback.
+
 ## 0.6.4 (21 Nov 2026)
 
 - **Readability**, off by default, the same switch as in Pocket XR for Mac and Windows (from a Mac tester's change:

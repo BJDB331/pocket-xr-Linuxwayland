@@ -24,6 +24,7 @@ KMOD_CTRL = 0x00C0
 
 sdl.SDL_GetDisplayName.restype = ctypes.c_char_p
 sdl.SDL_GetError.restype = ctypes.c_char_p
+sdl.SDL_GetCurrentVideoDriver.restype = ctypes.c_char_p
 sdl.SDL_CreateWindow.restype = ctypes.c_void_p
 sdl.SDL_CreateWindow.argtypes = [ctypes.c_char_p, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_uint32]
 sdl.SDL_GL_CreateContext.restype = ctypes.c_void_p

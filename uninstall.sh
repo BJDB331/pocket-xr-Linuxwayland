@@ -7,6 +7,23 @@ systemctl --user disable --now pocket-xr-host.service >/dev/null 2>&1 || true
 rm -f "$HOME/.config/systemd/user/pocket-xr-gaming.service" "$HOME/.config/systemd/user/pocket-xr-host.service" \
       "$HOME/.local/share/gamescope/reshade/Shaders/PocketXR.fx"
 systemctl --user daemon-reload >/dev/null 2>&1 || true
+# GNOME's keyboard shortcuts the installer added (pocket-xr-N), leaving any others as they are.
+KEYS=org.gnome.settings-daemon.plugins.media-keys
+if command -v gsettings >/dev/null 2>&1 && gsettings list-schemas 2>/dev/null | grep -qx "$KEYS"; then
+  list=$(gsettings get "$KEYS" custom-keybindings)
+  case "$list" in *pocket-xr-*)
+    for path in $(echo "$list" | grep -o "'[^']*pocket-xr-[0-9]*/'" | tr -d "'"); do
+      for key in name command binding; do gsettings reset "$KEYS.custom-keybinding:$path" "$key" || true; done
+    done
+    rest=$(echo "$list" | sed -E "s#'[^']*pocket-xr-[0-9]+/'(, )?##g; s#, \]#]#")
+    case "$rest" in "[]" | "@as []") rest="@as []" ;; esac
+    gsettings set "$KEYS" custom-keybindings "$rest" || true
+    ;;
+  esac
+fi
+if [ -f /etc/udev/rules.d/70-pocket-xr.rules ]; then
+  echo "The glasses' USB permission stays; to remove it too: sudo rm /etc/udev/rules.d/70-pocket-xr.rules"
+fi
 if [ -d "$HOME/homebrew/plugins/PocketXR" ] && [ -O "$HOME/homebrew/plugins" ]; then
   chmod u+w "$HOME/homebrew/plugins" && chmod -R u+w "$HOME/homebrew/plugins/PocketXR"
   rm -rf "$HOME/homebrew/plugins/PocketXR"

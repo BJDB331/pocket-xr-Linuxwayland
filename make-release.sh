@@ -21,6 +21,14 @@ if [ -f native/out/pxr-host-video ] && [ -f native/out/libpxr_host.so ]; then
 else
   echo "note: no host programs in native/out (run native/host/build.sh); the release has no Deck host" >&2
 fi
+# GNOME on Wayland's screen and pointer (native/mutter/build.sh): Pocket XR on Ubuntu's default desktop
+if [ -f native/out/pxr-mutter ]; then
+  mkdir -p dist/pocket-xr-deck/native
+  cp native/out/pxr-mutter dist/pocket-xr-deck/native/
+  chmod +x dist/pocket-xr-deck/native/pxr-mutter
+else
+  echo "note: no pxr-mutter in native/out (run native/mutter/build.sh); the release has no GNOME Wayland view" >&2
+fi
 # Gaming Mode's Quick Access panel for Decky (decky/, built with npm run build there)
 if [ -f decky/dist/index.js ]; then
   mkdir -p dist/pocket-xr-deck/decky/dist
