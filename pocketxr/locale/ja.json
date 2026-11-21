@@ -195,5 +195,8 @@
   "Put the desktop back to Wayland": "デスクトップを Wayland に戻す",
   "Done. XR Gaming's driver is stopped and won't start again. Unplug the glasses and plug them back in.": "完了。XR Gaming のドライバーを止めました。もう起動しません。グラスを抜いて、もう一度差してください。",
   "Done. It applies the next time you switch to Desktop.": "完了。次にデスクトップに切り替えたときに反映されます。",
-  "That didn't work: {error}": "うまくいきませんでした: {error}"
+  "That didn't work: {error}": "うまくいきませんでした: {error}",
+  "Readability": "読みやすさ",
+  "The Deck screen alone, 30 degrees wide: sharper text": "Deck の画面だけを幅 30 度で：文字がくっきり",
+  "The game screen 30 degrees wide: sharpest for a game drawn 1280 pixels wide. For larger text, pick a larger text or interface size in the game.": "ゲーム画面を幅 30 度で：横 1280 ピクセルで描くゲームが最もくっきり見えます。文字を大きくするには、ゲームで文字やインターフェースのサイズを大きくしてください。"
 }

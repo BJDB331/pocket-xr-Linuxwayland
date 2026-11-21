@@ -267,7 +267,9 @@ class Panel:
         for key, title, sub in (("sbs_3d", N_("3D side by side"), N_("Each eye its own view: windows at a real depth")),
                                 ("snap", N_("Snap windows together"), N_("Line up and dock as you move them")),
                                 ("locked", N_("Lock screens"), N_("Nothing moves or resizes; clicks still work")),
-                                ("cursor_follows_head", N_("Cursor follows head"), N_("Off: the cursor stays in the room"))):
+                                ("cursor_follows_head", N_("Cursor follows head"), N_("Off: the cursor stays in the room")),
+                                ("readability", N_("Readability"),
+                                 N_("The Deck screen alone, 30 degrees wide: sharper text"))):
             s = Switch(sp.body, tr(title), tr(sub), lambda on, k=key: send(k, on))
             s.pack(fill="x", padx=2)
             self.switches[key] = s

@@ -195,5 +195,8 @@
   "Put the desktop back to Wayland": "Remettre le bureau sous Wayland",
   "Done. XR Gaming's driver is stopped and won't start again. Unplug the glasses and plug them back in.": "C'est fait. Le pilote de XR Gaming est arrêté et ne redémarrera plus. Débranchez les lunettes puis rebranchez-les.",
   "Done. It applies the next time you switch to Desktop.": "C'est fait. Cela s'applique la prochaine fois que vous passez au Bureau.",
-  "That didn't work: {error}": "Ça n'a pas marché : {error}"
+  "That didn't work: {error}": "Ça n'a pas marché : {error}",
+  "Readability": "Lisibilité",
+  "The Deck screen alone, 30 degrees wide: sharper text": "L'écran du Deck seul, 30 degrés de large : un texte plus net",
+  "The game screen 30 degrees wide: sharpest for a game drawn 1280 pixels wide. For larger text, pick a larger text or interface size in the game.": "L'écran du jeu sur 30 degrés de large : le plus net pour un jeu affiché sur 1280 pixels de large. Pour un texte plus grand, choisissez une taille de texte ou d'interface plus grande dans le jeu."
 }

@@ -195,5 +195,8 @@
   "Put the desktop back to Wayland": "데스크톱을 Wayland로 되돌리기",
   "Done. XR Gaming's driver is stopped and won't start again. Unplug the glasses and plug them back in.": "완료. XR Gaming 드라이버를 멈췄고 다시 시작되지 않아요. 안경을 뽑았다가 다시 꽂으세요.",
   "Done. It applies the next time you switch to Desktop.": "완료. 다음에 데스크톱으로 전환할 때 적용돼요.",
-  "That didn't work: {error}": "잘 되지 않았어요: {error}"
+  "That didn't work: {error}": "잘 되지 않았어요: {error}",
+  "Readability": "가독성",
+  "The Deck screen alone, 30 degrees wide: sharper text": "Deck 화면만, 30도 너비로: 글자가 더 선명해요",
+  "The game screen 30 degrees wide: sharpest for a game drawn 1280 pixels wide. For larger text, pick a larger text or interface size in the game.": "게임 화면을 30도 너비로: 가로 1280픽셀로 그리는 게임이 가장 선명해요. 글자를 더 크게 하려면 게임에서 글자나 인터페이스 크기를 키우세요."
 }

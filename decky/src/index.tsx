@@ -1,6 +1,6 @@
 // Pocket XR's Quick Access panel: the Gaming Mode controls for Pocket XR for Steam Deck.
 // It talks to Pocket XR's Gaming Mode service through this plugin's backend (main.py). GPL-3.0, as Pocket XR.
-import { ButtonItem, PanelSection, PanelSectionRow, SliderField, staticClasses } from "@decky/ui";
+import { ButtonItem, PanelSection, PanelSectionRow, SliderField, ToggleField, staticClasses } from "@decky/ui";
 import { callable, definePlugin } from "@decky/api";
 import { useEffect, useState } from "react";
 import { FaGlasses } from "react-icons/fa";
@@ -17,6 +17,9 @@ type Status = {
   chosen?: string;
   size?: number;
   curve?: number;
+  readability?: boolean;
+  readability_label?: string; // in the panel's language, from the service
+  readability_line?: string;
   lang?: string;
   logs?: string;
   logs_error?: string;
@@ -145,6 +148,18 @@ function Content() {
             onChange={(v: number) => {
               setCurve(v);
               send({ op: "set_curve", curve: v / 100 });
+            }}
+          />
+        </PanelSectionRow>
+        <PanelSectionRow>
+          <ToggleField
+            label={st?.readability_label || "Readability"}
+            description={st?.readability_line}
+            checked={!!st?.readability}
+            disabled={!st?.running}
+            onChange={(on: boolean) => {
+              setSize(null); // the size follows the service's: readability changes it, and off puts it back
+              send({ op: "set_readability", on });
             }}
           />
         </PanelSectionRow>

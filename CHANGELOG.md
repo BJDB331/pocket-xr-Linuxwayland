@@ -1,5 +1,19 @@
 # Changes
 
+## Not released yet
+
+- **Readability**, off by default, the same switch as in Pocket XR for Mac and Windows (from a Mac tester's change:
+  one lower-resolution screen shown about 30 degrees wide, for sharp text on 1080p glasses). Not yet tried with
+  glasses.
+  - **Desktop Mode** (a switch on the control panel): the Deck screen alone, 30 degrees wide and in front. It keeps
+    the Deck's own 1280x800, already lower than 1440x810; 1280 px across 30 degrees is about one pixel to one
+    glasses pixel. In Steady 6DoF the screen is drawn at exactly its own pixels.
+  - **Gaming Mode** (a switch in Quick Access): the game screen 30 degrees wide. The game sets its own resolution,
+    so this can't make its text larger; it is sharpest for a game drawn 1280 pixels wide.
+  - Off puts back exactly what on changed: in Desktop Mode, Deck screen or App windows, the Deck screen's size and
+    place, and Steady's size; in Gaming Mode, the size. The values are kept in the settings file, so quitting in
+    between changes nothing. Turning it on and off is logged with the values before and after.
+
 ## 0.6.3 (21 Nov 2026)
 
 - **Gaming Mode: a curved screen.** Quick Access, Decky, Pocket XR has a **Curve** slider under Size, from 0 % (flat,

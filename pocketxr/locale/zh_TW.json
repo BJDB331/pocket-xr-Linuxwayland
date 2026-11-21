@@ -195,5 +195,8 @@
   "Put the desktop back to Wayland": "把桌面改回 Wayland",
   "Done. XR Gaming's driver is stopped and won't start again. Unplug the glasses and plug them back in.": "完成。XR Gaming 的驅動程式已停止，不會再啟動。請拔下眼鏡再插上。",
   "Done. It applies the next time you switch to Desktop.": "完成。下次切換到桌面時生效。",
-  "That didn't work: {error}": "沒有成功：{error}"
+  "That didn't work: {error}": "沒有成功：{error}",
+  "Readability": "易讀模式",
+  "The Deck screen alone, 30 degrees wide: sharper text": "只顯示 Deck 螢幕，30 度寬：文字更清晰",
+  "The game screen 30 degrees wide: sharpest for a game drawn 1280 pixels wide. For larger text, pick a larger text or interface size in the game.": "遊戲畫面 30 度寬：以 1280 像素寬繪製的遊戲最清晰。要讓文字更大，請在遊戲中選擇更大的文字或介面尺寸。"
 }

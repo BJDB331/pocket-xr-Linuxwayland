@@ -17,7 +17,7 @@ import sys
 import threading
 import time
 
-from . import fusion, glasses as gmod, hidimu, imu
+from . import fusion, glasses as gmod, hidimu, imu, readability
 from .deckpad import DeckButtons
 from .gl import (GL_BGRA, GL_BLEND, GL_CLAMP_TO_EDGE, GL_COLOR_BUFFER_BIT, GL_LINEAR, GL_LINE_LOOP, GL_MODELVIEW,
                  GL_ONE_MINUS_SRC_ALPHA, GL_PROJECTION, GL_QUADS, GL_RGBA, GL_SRC_ALPHA, GL_TEXTURE_2D,
@@ -32,7 +32,7 @@ from . import settingsctl
 from .i18n import tr
 from .recorder import Recorder
 from .settingsctl import SettingsControl
-from .space import STEADY_GAP_DEFAULT_PX, STEADY_GAP_STEP_PX, flat_layout, steady_gap_px
+from .space import STEADY_GAP_DEFAULT_PX, STEADY_GAP_STEP_PX, Pose, flat_layout, steady_gap_px
 from .spaceview import SpaceView
 from .xcapture import XCapture
 
@@ -45,7 +45,8 @@ GL_TEXTURE_MAX_ANISOTROPY = 0x84FE  # EXT_texture_filter_anisotropic, core in GL
 
 DEFAULTS = {"view": "3dof", "source": "deck", "distance": 2.0, "scale": 1.0, "canvas_scale": 0.8, "look": True,
             "snap": False, "locked": False, "cursor_speed": 5, "curve_default": 0.0, "cursor_follows_head": True, "sbs_3d": True,
-            "viture_tracking": None, "steady_gap_px": STEADY_GAP_DEFAULT_PX}
+            "viture_tracking": None, "steady_gap_px": STEADY_GAP_DEFAULT_PX,
+            "readability": False, "readability_saved": None}
 
 # 3DoF: a window 1600 px wide is this wide at 1.0, in metres (the Deck's screen 1.28 m, an app's 1920 px screen 1.92 m:
 # about 50 degrees at 2 m, a little narrower than the glasses' own view).
@@ -588,6 +589,8 @@ class App:
             self._record_saved(value)
         elif cmd in ("snap", "locked", "cursor_follows_head", "sbs_3d"):
             self.set_setting(cmd, bool(value))
+        elif cmd == "readability":
+            self.set_readability(value)
         elif cmd == "look":
             self.settings["look"] = bool(value)
             save_settings(self.settings)
@@ -678,6 +681,40 @@ class App:
             self.space.drag = None
             self.space.resize = None
             self.space.adjust_all = None
+
+    def set_readability(self, on):
+        """Readability (readability.py): the Deck screen alone, 30 degrees wide, about one pixel to one glasses pixel.
+        Off puts back what on changed."""
+        on = bool(on)
+        if on == bool(self.settings.get("readability")):
+            return
+        poses = self.space.poses
+        if on:
+            g = self.capture.glasses_rect
+            changes, pose, before, after = readability.desktop_on(self.settings, poses.get("deck"), g[3] if g else None)
+            self.settings.update(changes)
+            if pose is not None:
+                poses["deck"] = pose
+                self.space.tweens.pop("deck", None)
+            self.set_source("deck")
+            self.recentre()
+            self.log(f"readability on: before {before}; after {after}")
+        else:
+            before = {"source": self.settings.get("source"), "canvas_scale": self.settings.get("canvas_scale"),
+                      "deck_pose": poses["deck"].to_json() if "deck" in poses else None}
+            changes, pose = readability.desktop_off(self.settings)
+            self.settings.update(changes)
+            if pose is None:
+                poses.pop("deck", None)  # it had none before: it is made afresh, at the usual size
+            elif pose is not False and "deck" in poses:
+                poses["deck"] = Pose.from_json(pose)
+            self.space.tweens.pop("deck", None)
+            self.set_source(self.settings["source"])
+            after = {"source": self.settings.get("source"), "canvas_scale": self.settings.get("canvas_scale"),
+                     "deck_pose": poses["deck"].to_json() if "deck" in poses else "made afresh"}
+            self.log(f"readability off: before {before}; after {after}")
+        save_settings(self.settings)
+        self._send_status()
 
     def set_source(self, source):
         self.settings["source"] = source
@@ -799,6 +836,7 @@ class App:
             "locked": self.settings.get("locked", False),
             "cursor_follows_head": self.settings.get("cursor_follows_head", True),
             "sbs_3d": self.settings.get("sbs_3d", True),
+            "readability": bool(self.settings.get("readability")),
             "sbs_ok": bool(g and g.control_link),
             "pcvr": self.pcvr is not None,
             "pc_screens": self.pcscreens.open_count(),
