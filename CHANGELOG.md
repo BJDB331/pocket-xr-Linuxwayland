@@ -1,6 +1,6 @@
 # Changes
 
-## Unreleased
+## 0.6.3 (21 Nov 2026)
 
 - **Gaming Mode: a curved screen.** Quick Access, Decky, Pocket XR has a **Curve** slider under Size, from 0 % (flat,
   as before) to 100 % (bent round you, every part as far away as the middle). The screen keeps its width along the
