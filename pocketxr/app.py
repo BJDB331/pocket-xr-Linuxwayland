@@ -116,12 +116,15 @@ def steamos():
     return session.steamos()
 
 
-def steamos_wayland_text():
-    # It used to give the steamosctl command for X11. A tester's Deck (November 2026), after that switch, had a
-    # trackpad that moved but did not click, then hung at shutdown and at boot and came back at the first-run setup.
-    # So it no longer suggests the switch.
-    return tr("Pocket XR's Desktop Mode needs Plasma on X11, and this SteamOS starts Desktop Mode on Wayland. "
-              "Use Pocket XR in Gaming Mode: it starts by itself there.")
+def wayland_text():
+    """Why Desktop Mode stops on this Wayland desktop. Plasma (kwin.py) and GNOME (mutter.py) are supported; on
+    Plasma it stops only when its helper, pxr-kwin, is not installed. (It used to suggest SteamOS's X11 desktop. A
+    tester's Deck, November 2026, after that switch had a trackpad that moved but did not click, then hung at shutdown
+    and at boot, so it never suggests the switch.)"""
+    if session.desktop() == "kde":
+        return tr("Pocket XR's helper for Plasma on Wayland is missing: run the install line again.")
+    return tr("Pocket XR's Desktop Mode doesn't support this Wayland desktop yet. It works on Plasma, GNOME and X11. "
+              "Or use Gaming Mode.")
 
 
 class App:
@@ -163,14 +166,9 @@ class App:
         self.backend = session.backend()
         if self.backend is None:
             # X11 apps can't move app windows, the pointer or the view on a Wayland desktop (a tester on CachyOS's
-            # Wayland desktop lost control of the Deck and had to hard restart), and only GNOME's Wayland desktop has
-            # the screen cast and input Pocket XR uses there (mutter.py). Say so and stop instead. SteamOS 3.9 starts
-            # Desktop Mode on Wayland by default (a Deck on 3.9.5, 20 Nov 2026: steamosctl get-default-desktop-session
-            # gave plasma.desktop; plasmax11.desktop is the other choice), and Desktop Mode is entered from Gaming
-            # Mode, so there the way to X11 is steamosctl.
-            text = steamos_wayland_text() if steamos() else tr(
-                "Pocket XR's Desktop Mode needs a Plasma (X11) session. Wayland isn't supported yet. "
-                "Log out and pick Plasma (X11), or use Gaming Mode.")
+            # Wayland desktop lost control of the Deck and had to hard restart), and only GNOME's and Plasma's Wayland
+            # desktops have the screen cast and input Pocket XR uses there (mutter.py, kwin.py). Say so and stop.
+            text = wayland_text()
             self.log("Wayland desktop session (XDG_SESSION_TYPE=%s, WAYLAND_DISPLAY=%s): not starting" %
                      (os.environ.get("XDG_SESSION_TYPE"), os.environ.get("WAYLAND_DISPLAY")))
             notify(text)
@@ -181,17 +179,23 @@ class App:
         sdl.SDL_SetHint(b"SDL_VIDEO_MINIMIZE_ON_FOCUS_LOSS", b"0")
         # Only a real close quits: a closing terminal or SSH session must not take the view down.
         sdl.SDL_SetHint(b"SDL_NO_SIGNAL_HANDLERS", b"1")
-        if self.backend == "mutter":
+        if self.backend in ("mutter", "kwin"):
             # A Wayland window of its own on the glasses' monitor (not through Xwayland, which would scale it on a
             # scaled desktop), unless SDL_VIDEODRIVER says otherwise.
             os.environ.setdefault("SDL_VIDEODRIVER", "wayland,x11")
-            from .mutter import MutterCapture
-            self.capture = MutterCapture(log=self.log)
+            if self.backend == "mutter":
+                from .mutter import MutterCapture as Capture
+            else:
+                from .kwin import KWinCapture as Capture
+            self.capture = Capture(log=self.log)
             self.capture.source = self.settings["source"]
             self.capture.start()
             self.capture.ready.wait(10)
             if self.capture.failed:
-                self.log("capture through Mutter failed: " + self.capture.failed)
+                self.log(f"capture through {self.backend} failed: " + self.capture.failed)
+                if self.backend == "kwin":
+                    notify(tr("Pocket XR can't see the screen on Plasma's Wayland desktop: run the install line "
+                              "again, then log out and back in."))
         else:
             # Xlib from several threads (SDL here, the capture thread): must come before any other Xlib call.
             from .xcapture import x11
@@ -200,7 +204,7 @@ class App:
             self.log("SDL_Init failed: " + sdl.SDL_GetError().decode())
             return 1
         self.log(f"view: SDL video driver {sdl.SDL_GetCurrentVideoDriver().decode()}")
-        if self.backend != "mutter":
+        if self.backend not in ("mutter", "kwin"):
             from .xcapture import XCapture
             _, deck = self._split()
             deck_rect = (deck[2], deck[3], deck[4], deck[5]) if deck else (0, 0, 1280, 800)
@@ -252,7 +256,7 @@ class App:
         """(the glasses' display, the main screen's) as SDL numbers them: on GNOME on Wayland as Mutter names the
         monitors (SDL's names there may not say which are glasses), elsewhere from SDL's own names."""
         found = displays()
-        if self.backend == "mutter":
+        if self.backend in ("mutter", "kwin"):
             g, main = self.capture.split(found)
             if g is not None or main is not None:
                 return g, main

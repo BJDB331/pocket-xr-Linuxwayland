@@ -4,9 +4,11 @@
             xcapture.py, with app windows.
   "mutter"  GNOME on Wayland (Ubuntu's default, and its only session from 25.10): mutter.py, through GNOME's own
             screen cast and remote desktop interfaces, the screen only.
-  None      a Wayland desktop that is not GNOME (Plasma on Wayland, others): not supported yet.
+  "kwin"    KDE Plasma on Wayland (SteamOS 3.9's Desktop Mode, Bazzite, CachyOS, Fedora KDE, Kubuntu): kwin.py,
+            through KWin's own screen cast, window list and fake input, with app windows.
+  None      another Wayland desktop (sway, Hyprland, others), or a helper that is not installed: not supported yet.
 
-POCKETXR_BACKEND=x11 or mutter picks one; POCKETXR_ALLOW_WAYLAND=1 (older, for testing) means x11.
+POCKETXR_BACKEND=x11, mutter or kwin picks one; POCKETXR_ALLOW_WAYLAND=1 (older, for testing) means x11.
 """
 import os
 import shutil
@@ -15,7 +17,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 def _native(name):
-    """In native/ when installed, in native/out/ in a checkout after native/mutter/build.sh."""
+    """In native/ when installed, in native/out/ in a checkout after native/mutter/build.sh or native/kwin/build.sh."""
     for folder in (os.path.join(ROOT, "native"), os.path.join(ROOT, "native", "out")):
         p = os.path.join(folder, name)
         if os.path.exists(p):
@@ -24,6 +26,7 @@ def _native(name):
 
 
 MUTTER_HELPER = _native("pxr-mutter")
+KWIN_HELPER = _native("pxr-kwin")
 
 
 def steamos():
@@ -52,10 +55,10 @@ def desktop(env=None):
     return ""
 
 
-def backend(env=None, helper=None):
+def backend(env=None, helper=None, kwin_helper=None):
     env = os.environ if env is None else env
     forced = env.get("POCKETXR_BACKEND", "")
-    if forced in ("x11", "mutter"):
+    if forced in ("x11", "mutter", "kwin"):
         return forced
     if env.get("POCKETXR_ALLOW_WAYLAND") == "1":
         return "x11"
@@ -64,4 +67,6 @@ def backend(env=None, helper=None):
         return "x11"
     if desktop(env) == "gnome" and os.path.exists(MUTTER_HELPER if helper is None else helper):
         return "mutter"
+    if desktop(env) == "kde" and os.path.exists(KWIN_HELPER if kwin_helper is None else kwin_helper):
+        return "kwin"
     return None

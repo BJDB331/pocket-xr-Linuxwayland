@@ -93,6 +93,27 @@ if [ -d "$HOME/Desktop" ]; then
 fi
 update-desktop-database "$APPS" >/dev/null 2>&1 || true
 
+# Plasma on Wayland (SteamOS 3.9's Desktop Mode, Bazzite, CachyOS, Fedora KDE, Kubuntu): Pocket XR reads the screen and
+# app windows, lists the windows and keeps the pointer off the glasses through KWin's own interfaces (pocketxr/kwin.py,
+# native/pxr-kwin). KWin offers them only to a program a desktop file names, by its full path: written here, hidden
+# from the menus. KWin finds it through KDE's service cache, rebuilt here.
+if [ -x "$DEST/native/pxr-kwin" ]; then
+  cat > "$APPS/pocket-xr-kwin.desktop" <<EOF
+[Desktop Entry]
+Type=Application
+Name=Pocket XR screen reader
+Comment=Pocket XR on Plasma's Wayland desktop: your screen and app windows in your glasses
+Exec=$DEST/native/pxr-kwin
+NoDisplay=true
+X-KDE-Wayland-Interfaces=zkde_screencast_unstable_v1,org_kde_plasma_window_management,org_kde_kwin_fake_input
+EOF
+  if command -v kbuildsycoca6 >/dev/null 2>&1; then
+    kbuildsycoca6 >/dev/null 2>&1 || true
+  elif command -v kbuildsycoca5 >/dev/null 2>&1; then
+    kbuildsycoca5 >/dev/null 2>&1 || true
+  fi
+fi
+
 # The glasses' motion sensors (XREAL Air family, VITURE) and Joy-Cons are USB HID devices. SteamOS lets the signed-in
 # user read them; Ubuntu and most others need a udev rule for that (uaccess: whoever sits at the computer, no group).
 UDEV_RULE=/etc/udev/rules.d/70-pocket-xr.rules
@@ -233,7 +254,8 @@ else
   echo "Plug in your glasses and open it from the app menu."
   case "${XDG_CURRENT_DESKTOP:-}:${XDG_SESSION_TYPE:-}" in
     *GNOME*:wayland) echo "On GNOME it shows your main screen in the glasses (each app window in its own place needs X11 for now)." ;;
-    *:wayland) echo "Its view needs GNOME, or an X11 session such as Plasma (X11), on this computer." ;;
+    *KDE*:wayland) echo "On Plasma's Wayland desktop it shows your screen or each app window. If it says it can't see the screen, log out and back in once." ;;
+    *:wayland) echo "Its view needs Plasma, GNOME, or an X11 session on this computer." ;;
   esac
 fi
 if [ "$SHORTCUTS" = yes ]; then

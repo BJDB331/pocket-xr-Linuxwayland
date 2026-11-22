@@ -33,15 +33,17 @@ curl -L https://github.com/pocket-xr/pocket-xr-deck/releases/latest/download/poc
 Pocket XR then appears on the desktop and in the app menu, and starts by itself in Gaming Mode. No password is
 needed. It installs into your home folder, so SteamOS updates leave it alone. Run the same line again to update.
 
-Pocket XR's own Desktop Mode view needs KDE Plasma on X11. The SteamOS 3.9.5 Decks we have seen start Desktop Mode
-on Wayland, so on those use Pocket XR in Gaming Mode. Please don't switch SteamOS's desktop to X11 for it: a tester's
-Deck had trouble after that switch (a trackpad that would not click, then hangs at shutdown and boot). If you already
-switched, this in Konsole puts Wayland back, from the next time you switch to Desktop:
+New: Pocket XR's Desktop Mode view now runs on Plasma's **Wayland** desktop, which SteamOS 3.9 starts Desktop Mode
+on, so there's no need to switch to X11. It shows the Deck screen or each app window, through KWin's own screen cast;
+see [Plasma on Wayland](docs/KDE-WAYLAND.md). It has been tried only in a test KDE session so far, not yet on a Deck
+or with glasses: please send a "works" or "doesn't" with your log. Please don't switch SteamOS's desktop to X11 for
+Pocket XR: a tester's Deck had trouble after that switch (a trackpad that would not click, then hangs at shutdown and
+boot). If you already switched, this in Konsole puts Wayland back, from the next time you switch to Desktop:
 `steamosctl set-default-desktop-session plasma.desktop` (or press **Put the desktop back to Wayland** in Quick
 Access). Your Deck on your phone (below) needs Wayland.
 
-Not on SteamOS? See [Ubuntu and other Linux](#ubuntu-and-other-linux). On a Plasma Wayland desktop (the default on
-CachyOS, Bazzite and others) log out and pick **Plasma (X11)**, or use Gaming Mode. If a back button also opens your
+Not on SteamOS? See [Ubuntu and other Linux](#ubuntu-and-other-linux). Plasma on Wayland (the default on CachyOS,
+Bazzite, Fedora KDE, Kubuntu and others) works the same way as on the Deck. If a back button also opens your
 desktop's own menu, your system has mapped that button too: clear it in Steam's desktop controller layout or your
 handheld tool (like HHD or InputPlumber).
 
@@ -92,8 +94,10 @@ What you get:
 - **GNOME on Wayland** (Ubuntu's default): your main screen in the glasses, held still in space. App windows each in
   their own place aren't there yet; choosing them shows the main screen. GNOME shows its screen sharing icon while
   Pocket XR runs: that's how Pocket XR sees the screen.
+- **Plasma on Wayland** (Kubuntu, Fedora KDE, Bazzite, CachyOS, SteamOS 3.9): your main screen, or each app window
+  in its own place, through KWin. No dialog and no sharing icon. See [Plasma on Wayland](docs/KDE-WAYLAND.md).
 - **X11** (Ubuntu 24.04's "Ubuntu on Xorg", Plasma (X11)): the same as on the Deck, app windows included.
-- Plasma on Wayland and other Wayland desktops: not yet.
+- Other Wayland desktops (sway, Hyprland and others): not yet.
 
 Gaming Mode, Quick Access and the back buttons are the Deck's own. What was checked and how: `docs/UBUNTU.md`.
 

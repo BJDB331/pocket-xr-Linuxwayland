@@ -35,6 +35,7 @@ rm -rf "$HOME/.local/share/pocket-xr-deck"
 rm -f "$HOME/.local/bin/pocket-xr" \
       "$HOME/.local/share/applications/pocket-xr.desktop" \
       "$HOME/.local/share/applications/pocket-xr-host.desktop" \
+      "$HOME/.local/share/applications/pocket-xr-kwin.desktop" \
       "$HOME/Desktop/pocket-xr.desktop" \
       "$HOME/.local/share/icons/hicolor/512x512/apps/pocket-xr.png"
 rm -rf "$HOME/.local/share/fonts/pocket-xr"

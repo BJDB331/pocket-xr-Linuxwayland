@@ -12,9 +12,10 @@ SteamOS; screen through mutter`):
 | --- | --- | --- |
 | X11: SteamOS's Plasma (X11), Kubuntu's Plasma (X11), Ubuntu 24.04's "Ubuntu on Xorg", others | `xcapture.py` (X11), as on the Deck | Deck screen and App windows |
 | GNOME on Wayland: Ubuntu's default, and its only GNOME session from 25.10 (GNOME 49 removed X11) | `mutter.py` and the native helper `pxr-mutter` | The main screen only |
-| Any other Wayland desktop (Plasma on Wayland, others) | none: it says so and stops, as before | Nothing yet |
+| Plasma on Wayland: Kubuntu, Fedora KDE, Bazzite, CachyOS, SteamOS 3.9's Desktop Mode | `kwin.py` and the native helper `pxr-kwin` ([KDE-WAYLAND.md](KDE-WAYLAND.md)) | Deck screen and App windows |
+| Any other Wayland desktop (sway, Hyprland, others) | none: it says so and stops, as before | Nothing yet |
 
-`POCKETXR_BACKEND=x11` or `mutter` forces one. `POCKETXR_MAIN_MONITOR=<connector>` picks the main screen on GNOME
+`POCKETXR_BACKEND=x11`, `mutter` or `kwin` forces one. `POCKETXR_MAIN_MONITOR=<connector>` picks the main screen on GNOME
 (for testing).
 
 ### GNOME on Wayland: Mutter's own interfaces
@@ -107,7 +108,7 @@ in for the main screen and the rest for the glasses' output; `XCapture` driven d
   the udev rule, the glasses' monitor names, sharpness, Steady 6DoF.
 - A real GNOME session on hardware (GPU, a real mouse and touchpad), fractional scaling, and the Wayland view's
   frame rate. Each frame is copied through shared memory, as `XGetImage` copies on X11.
-- Kubuntu (Plasma X11 or Wayland), other distributions, GNOME's Xorg session with a real second monitor.
+- Kubuntu on Plasma X11 (Plasma on Wayland: [KDE-WAYLAND.md](KDE-WAYLAND.md)), other distributions, GNOME's Xorg session with a real second monitor.
 - PC VR on Ubuntu: `libpxr_pcvr.so` links SteamOS's `libavcodec.so.61`; 26.04 has FFmpeg 7.1 (the same soname),
   24.04 has 6.1 (`.60`), so it cannot load there.
 - Show a PC and the Deck-on-your-phone host on GNOME.

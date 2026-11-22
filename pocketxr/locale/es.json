@@ -186,10 +186,8 @@
   "{n} windows were left out: {apps} isn't on this Deck.": "Se dejaron fuera {n} ventanas: {apps} no está en este Deck.",
   "{n} windows were left out: {apps} aren't on this Deck.": "Se dejaron fuera {n} ventanas: {apps} no están en este Deck.",
   "{first} and {last}": "{first} y {last}",
-  "Pocket XR's Desktop Mode needs a Plasma (X11) session. Wayland isn't supported yet. Log out and pick Plasma (X11), or use Gaming Mode.": "El modo escritorio de Pocket XR necesita una sesión Plasma (X11). Wayland aún no es compatible. Cierra sesión y elige Plasma (X11), o usa el modo de juego.",
   "Screen gap": "Separación entre pantallas",
   "The space between screens in Steady mode.": "El espacio entre las pantallas en el modo Steady.",
-  "Pocket XR's Desktop Mode needs Plasma on X11, and this SteamOS starts Desktop Mode on Wayland. Use Pocket XR in Gaming Mode: it starts by itself there.": "El modo Escritorio de Pocket XR necesita Plasma en X11, y este SteamOS inicia el modo Escritorio en Wayland. Usa Pocket XR en el modo Juego: allí se inicia solo.",
   "XR Gaming's driver is running, even with its plugin removed, and it takes the glasses and the game screen. Stop it in Konsole: {command}": "El controlador de XR Gaming sigue en marcha, aunque se haya quitado su plugin, y se queda con las gafas y la pantalla del juego. Detenlo en Konsole: {command}",
   "Stop XR Gaming's driver": "Detener el controlador de XR Gaming",
   "Put the desktop back to Wayland": "Volver a poner el escritorio en Wayland",
@@ -198,5 +196,8 @@
   "That didn't work: {error}": "No ha funcionado: {error}",
   "Readability": "Legibilidad",
   "The Deck screen alone, 30 degrees wide: sharper text": "Solo la pantalla del Deck, de 30 grados de ancho: texto más nítido",
-  "The game screen 30 degrees wide: sharpest for a game drawn 1280 pixels wide. For larger text, pick a larger text or interface size in the game.": "La pantalla del juego de 30 grados de ancho: lo más nítido para un juego dibujado a 1280 píxeles de ancho. Para un texto más grande, elige un tamaño de texto o de interfaz mayor en el juego."
+  "The game screen 30 degrees wide: sharpest for a game drawn 1280 pixels wide. For larger text, pick a larger text or interface size in the game.": "La pantalla del juego de 30 grados de ancho: lo más nítido para un juego dibujado a 1280 píxeles de ancho. Para un texto más grande, elige un tamaño de texto o de interfaz mayor en el juego.",
+  "Pocket XR can't see the screen on Plasma's Wayland desktop: run the install line again, then log out and back in.": "Pocket XR no ve la pantalla en el escritorio Wayland de Plasma: vuelve a ejecutar la línea de instalación y luego cierra sesión y vuelve a entrar.",
+  "Pocket XR's Desktop Mode doesn't support this Wayland desktop yet. It works on Plasma, GNOME and X11. Or use Gaming Mode.": "El modo Escritorio de Pocket XR aún no es compatible con este escritorio Wayland. Funciona en Plasma, GNOME y X11. O usa el modo Juego.",
+  "Pocket XR's helper for Plasma on Wayland is missing: run the install line again.": "Falta el programa auxiliar de Pocket XR para Plasma en Wayland: vuelve a ejecutar la línea de instalación."
 }

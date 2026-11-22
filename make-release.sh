@@ -29,6 +29,14 @@ if [ -f native/out/pxr-mutter ]; then
 else
   echo "note: no pxr-mutter in native/out (run native/mutter/build.sh); the release has no GNOME Wayland view" >&2
 fi
+# Plasma on Wayland's screen, app windows and pointer (native/kwin/build.sh): SteamOS 3.9's Desktop Mode and other KDE
+if [ -f native/out/pxr-kwin ]; then
+  mkdir -p dist/pocket-xr-deck/native
+  cp native/out/pxr-kwin dist/pocket-xr-deck/native/
+  chmod +x dist/pocket-xr-deck/native/pxr-kwin
+else
+  echo "note: no pxr-kwin in native/out (run native/kwin/build.sh); the release has no Plasma Wayland view" >&2
+fi
 # Gaming Mode's Quick Access panel for Decky (decky/, built with npm run build there)
 if [ -f decky/dist/index.js ]; then
   mkdir -p dist/pocket-xr-deck/decky/dist

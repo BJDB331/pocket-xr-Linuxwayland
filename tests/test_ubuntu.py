@@ -32,14 +32,20 @@ class Backend(unittest.TestCase):
         self.assertIsNone(S.backend(env, helper="/nonexistent/pxr-mutter"))
 
     def test_other_wayland_desktops_are_not_supported_yet(self):
-        for desk in ("KDE", "sway", ""):
+        for desk in ("sway", "Hyprland", ""):
             env = {"XDG_SESSION_TYPE": "wayland", "XDG_CURRENT_DESKTOP": desk}
-            self.assertIsNone(S.backend(env, helper=__file__), desk)
+            self.assertIsNone(S.backend(env, helper=__file__, kwin_helper=__file__), desk)
+
+    def test_plasma_on_wayland_uses_kwin_when_the_helper_is_there(self):
+        env = {"XDG_SESSION_TYPE": "wayland", "XDG_CURRENT_DESKTOP": "KDE"}
+        self.assertEqual(S.backend(env, helper=__file__, kwin_helper=__file__), "kwin")
+        self.assertIsNone(S.backend(env, helper=__file__, kwin_helper="/nonexistent/pxr-kwin"))
 
     def test_overrides(self):
         wl = {"XDG_SESSION_TYPE": "wayland", "XDG_CURRENT_DESKTOP": "KDE"}
         self.assertEqual(S.backend(dict(wl, POCKETXR_ALLOW_WAYLAND="1"), helper=__file__), "x11")
         self.assertEqual(S.backend(dict(wl, POCKETXR_BACKEND="mutter"), helper=__file__), "mutter")
+        self.assertEqual(S.backend(dict(wl, POCKETXR_BACKEND="kwin"), helper=__file__), "kwin")
 
 
 def mon(conn, x, y, w, h, name="", vendor="", product="", primary=False, on=True, scale=1.0):

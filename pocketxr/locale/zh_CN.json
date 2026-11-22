@@ -186,10 +186,8 @@
   "{n} windows were left out: {apps} isn't on this Deck.": "有 {n} 个窗口未导入：这台 Deck 上没有 {apps}。",
   "{n} windows were left out: {apps} aren't on this Deck.": "有 {n} 个窗口未导入：这台 Deck 上没有 {apps}。",
   "{first} and {last}": "{first}和{last}",
-  "Pocket XR's Desktop Mode needs a Plasma (X11) session. Wayland isn't supported yet. Log out and pick Plasma (X11), or use Gaming Mode.": "Pocket XR 的桌面模式需要 Plasma (X11) 会话，暂不支持 Wayland。请注销后选择 Plasma (X11)，或使用游戏模式。",
   "Screen gap": "屏幕间距",
   "The space between screens in Steady mode.": "Steady 模式下屏幕之间的距离。",
-  "Pocket XR's Desktop Mode needs Plasma on X11, and this SteamOS starts Desktop Mode on Wayland. Use Pocket XR in Gaming Mode: it starts by itself there.": "Pocket XR 的桌面模式需要 X11 上的 Plasma，而这个 SteamOS 以 Wayland 启动桌面模式。请在游戏模式中使用 Pocket XR：它会在那里自动启动。",
   "XR Gaming's driver is running, even with its plugin removed, and it takes the glasses and the game screen. Stop it in Konsole: {command}": "XR Gaming 的驱动在插件删除后仍在运行，并占用眼镜和游戏画面。请在 Konsole 中停止它：{command}",
   "Stop XR Gaming's driver": "停止 XR Gaming 的驱动",
   "Put the desktop back to Wayland": "把桌面改回 Wayland",
@@ -198,5 +196,8 @@
   "That didn't work: {error}": "没有成功：{error}",
   "Readability": "易读模式",
   "The Deck screen alone, 30 degrees wide: sharper text": "只显示 Deck 屏幕，30 度宽：文字更清晰",
-  "The game screen 30 degrees wide: sharpest for a game drawn 1280 pixels wide. For larger text, pick a larger text or interface size in the game.": "游戏画面 30 度宽：以 1280 像素宽绘制的游戏最清晰。要让文字更大，请在游戏中选择更大的文字或界面尺寸。"
+  "The game screen 30 degrees wide: sharpest for a game drawn 1280 pixels wide. For larger text, pick a larger text or interface size in the game.": "游戏画面 30 度宽：以 1280 像素宽绘制的游戏最清晰。要让文字更大，请在游戏中选择更大的文字或界面尺寸。",
+  "Pocket XR can't see the screen on Plasma's Wayland desktop: run the install line again, then log out and back in.": "Pocket XR 无法在 Plasma 的 Wayland 桌面上读取屏幕：请再次运行安装命令，然后注销并重新登录。",
+  "Pocket XR's Desktop Mode doesn't support this Wayland desktop yet. It works on Plasma, GNOME and X11. Or use Gaming Mode.": "Pocket XR 的桌面模式暂不支持这个 Wayland 桌面。它可在 Plasma、GNOME 和 X11 上运行。也可以使用游戏模式。",
+  "Pocket XR's helper for Plasma on Wayland is missing: run the install line again.": "缺少 Pocket XR 用于 Wayland 上 Plasma 的辅助程序：请再次运行安装命令。"
 }

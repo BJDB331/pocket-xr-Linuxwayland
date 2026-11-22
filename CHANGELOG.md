@@ -1,5 +1,18 @@
 # Changes
 
+## 0.8.0 (unreleased)
+
+- **Plasma on Wayland.** Pocket XR's Desktop Mode view runs on Plasma's Wayland desktop: SteamOS 3.9's Desktop Mode,
+  Kubuntu, Fedora KDE, Bazzite and CachyOS. It no longer says to use X11 or Gaming Mode there. Tried in a headless
+  KWin session, not yet on a Deck or with glasses; what was seen is in `docs/KDE-WAYLAND.md`.
+  - **Deck screen** and **App windows**, each app window in its own place, through KWin's own screen cast, window
+    list and fake input, and a new native helper, `pxr-kwin`. No dialog and no sharing icon. Windows aren't moved:
+    KWin gives each window's picture where it is. Looking at a window brings it to the front.
+  - The pointer is put back on the main screen when it goes onto the glasses' monitor.
+  - The installer writes the desktop file KWin needs before it offers these to `pxr-kwin` (`pocket-xr-kwin.desktop`);
+    `uninstall.sh` removes it.
+  - Other Wayland desktops (sway, Hyprland) still say they aren't supported, in new words that name what is.
+
 ## 0.7.0 (21 Nov 2026)
 
 - **Ubuntu.** Pocket XR runs on Ubuntu 24.04 and 26.04 as well as SteamOS. Tried in headless GNOME sessions on a PC
